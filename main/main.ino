@@ -7,6 +7,8 @@ extern "C" {
 #include <ArduinoJson.h>
 #include "DHT.h"
 
+const char* TZ_INFO    = "BRST+3BRDT+2,M10.3.0,M2.3.0";  // enter your time zone (https://remotemonitoringsystems.ca/time-zone-abbreviations.php)
+
 #define DHTPIN 4    
 
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
@@ -151,6 +153,9 @@ void setup() {
   Serial.println();
   Serial.println();
 
+  configTime (0, 0, "pool.ntp.org", "time.nist.gov");
+  setenv("TZ", TZ_INFO, 1);
+
   dht.begin();
 
   mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
@@ -186,6 +191,8 @@ void loop() {
     Serial.print(F("Humidity: "));
     Serial.print(h);
     Serial.print(F("%  Temperature: "));
-    Serial.println(t);
+    Serial.print(t);
+    Serial.print(F(" Timestamp (epoch): "));
+    Serial.println(time(nullptr));
 
 }
