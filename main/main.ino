@@ -32,6 +32,8 @@ TimerHandle_t mqttReconnectTimer;
 TimerHandle_t wifiReconnectTimer;
 TimerHandle_t sensorsTimer;
 
+boolean active = false;
+
 void connectToWifi() {
   Serial.println("Connecting to Wi-Fi...");
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -45,24 +47,7 @@ void connectToMqtt() {
 void readSensors(){
 
   Serial.println("Iniciando leitura dos sensores");
-
-  while (true){
-
-    vTaskDelay(2000);
-
-    float h = dht.readHumidity();
-    float t = dht.readTemperature();
-
-    if (isnan(h) || isnan(t)) {
-      Serial.println(F("Failed to read from DHT sensor!"));
-      return;
-    }
-
-    Serial.print(F("Humidity: "));
-    Serial.print(h);
-    Serial.print(F("%  Temperature: "));
-    Serial.println(t);
-  }
+  active = true;
 
 }
 
@@ -74,17 +59,21 @@ void WiFiEvent(WiFiEvent_t event) {
         Serial.println("IP address: ");
         Serial.println(WiFi.localIP());
         connectToMqtt();
+
+        xTimerStart(sensorsTimer, 0);
+
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
         Serial.println("WiFi lost connection");
         xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
+        xTimerStop(sensorsTimer, 0); // desativa as leituras caso o Wi-Fi esteja desconectado
+        active = false; // desativa as leituras caso o Wi-Fi esteja desconectado
         xTimerStart(wifiReconnectTimer, 0);
         break;
     }
 }
 
 void onMqttConnect(bool sessionPresent) {
-  //xTimerStart(sensorsTimer, 0);
   Serial.println("Connected to MQTT.");
   Serial.print("Session present: ");
   Serial.println(sessionPresent);
@@ -160,7 +149,7 @@ void setup() {
 
   mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
   wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
-  //sensorsTimer = xTimerCreate("sensorsTimer", pdMS_TO_TICKS(5000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(readSensors));
+  sensorsTimer = xTimerCreate("sensorsTimer", pdMS_TO_TICKS(10000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(readSensors));
 
   WiFi.onEvent(WiFiEvent);
 
@@ -178,7 +167,9 @@ void setup() {
 
 void loop() {
 
-    delay(2000);
+  if(active){
+
+    vTaskDelay(2000);
 
     float h = dht.readHumidity();
     float t = dht.readTemperature();
@@ -195,4 +186,5 @@ void loop() {
     Serial.print(F(" Timestamp (epoch): "));
     Serial.println(time(nullptr));
 
+  }
 }
