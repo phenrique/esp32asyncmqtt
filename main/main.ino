@@ -21,11 +21,15 @@ const char* TZ_INFO    = "BRST+3BRDT+2,M10.3.0,M2.3.0";  // enter your time zone
 #define MQTT_PORT 1883
 
 #define MQTT_CLIENT_ID "ESP32Phcn"
+#define MQTT_MESSAGE_LEN 128
 #define SENSORS_TOPIC MQTT_CLIENT_ID "/sensors"
+#define DEVICE_ID "01ESP32"
+
+
 
 DHT dht(DHTPIN, DHTTYPE);
 
-DynamicJsonDocument doc(1024);
+StaticJsonDocument<MQTT_MESSAGE_LEN> doc;
 
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
@@ -179,11 +183,13 @@ void loop() {
       return;
     }
 
+
+    doc["device"] = DEVICE_ID;
     doc["humidity"] = round(h);
     doc["temperature"] = round(t);
     doc["timestamp"] = time(nullptr);
 
-    char output[1024];
+    char output[MQTT_MESSAGE_LEN];
     serializeJson(doc, output);
     Serial.println(output);
     mqttClient.publish(SENSORS_TOPIC, 0, true, output);
