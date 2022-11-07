@@ -184,7 +184,7 @@ void loop() {
     }
 
 
-    doc["device"] = DEVICE_ID;
+    doc["deviceId"] = 1;
     doc["humidity"] = round(h);
     doc["temperature"] = round(t);
     doc["timestamp"] = time(nullptr);
