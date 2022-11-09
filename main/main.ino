@@ -43,7 +43,6 @@ AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
 TimerHandle_t wifiReconnectTimer;
 TimerHandle_t sensorsTimer;
-TimerHandle_t weatherTimer;
 TimerHandle_t noiseTimer;
 
 boolean active = false;
@@ -71,7 +70,6 @@ void deactiveReadSensors(){
 
   Serial.println("Interrompendo leitura dos sensores");
   active = false;
-  xTimerStop(weatherTimer, 0); // desativa as leituras caso o Wi-Fi esteja desconectado
   xTimerStop(noiseTimer, 0); // desativa as leituras caso o Wi-Fi esteja desconectado
 
 }
@@ -96,7 +94,7 @@ void noiseMonitoring(){
 
     uint32_t noise = readNoiseSensor();
 
-    if(noise > 2400){
+    if(noise > 2300){
 
       char output[35];
       sprintf(output, "{deviceId:1,timestamp:%u}", time(nullptr));
@@ -234,7 +232,6 @@ void setup() {
 
   mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
   wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
-  weatherTimer = xTimerCreate("weatherTimer", pdMS_TO_TICKS(6000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(publishWeatherRead));
   sensorsTimer = xTimerCreate("sensorsTimer", pdMS_TO_TICKS(10000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(activeReadSensors));
   noiseTimer = xTimerCreate("noiseTimer", pdMS_TO_TICKS(1000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(noiseMonitoring));
 
