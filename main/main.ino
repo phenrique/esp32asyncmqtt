@@ -11,7 +11,6 @@ extern "C" {
 
 esp_adc_cal_characteristics_t adc_cal; //Estrutura que contem as informacoes para calibracao
 
-bool activeReadNoise = false;
 
 const char* TZ_INFO    = "BRST+3BRDT+2,M10.3.0,M2.3.0";  // enter your time zone (https://remotemonitoringsystems.ca/time-zone-abbreviations.php)
 
@@ -63,8 +62,7 @@ void activeReadSensors(){
 
   Serial.println("Iniciando leitura dos sensores");
   active = true;
-  activeReadNoise = true;
-  xTimerStart(weatherTimer, 0);
+  xTimerStart(noiseTimer, 0);
   xTimerStop(sensorsTimer, 0);
 
 }
@@ -73,7 +71,6 @@ void deactiveReadSensors(){
 
   Serial.println("Interrompendo leitura dos sensores");
   active = false;
-  activeReadNoise = false;
   xTimerStop(weatherTimer, 0); // desativa as leituras caso o Wi-Fi esteja desconectado
   xTimerStop(noiseTimer, 0); // desativa as leituras caso o Wi-Fi esteja desconectado
 
@@ -96,20 +93,46 @@ uint32_t readNoiseSensor(){
 }
 
 void noiseMonitoring(){
-  if(activeReadNoise){
+
     uint32_t noise = readNoiseSensor();
-    char output[35];
-    sprintf(output, "{deviceId:1,timestamp:%u}", time(nullptr));
-    Serial.print("noise up! ");
-    Serial.println(output);
-    mqttClient.publish(NOISE_TOPIC, 0, false, output);
+
+    if(noise > 2400){
+
+      char output[35];
+      sprintf(output, "{deviceId:1,timestamp:%u}", time(nullptr));
+      Serial.print("noise up! ");
+      Serial.println(output);
+      mqttClient.publish(NOISE_TOPIC, 0, false, output);
+      xTimerStart(noiseTimer, 0);
+
+    }
+
     xTimerStart(noiseTimer, 0);
-    activeReadNoise = false;
-  }
 }
 
-void activeNoiseSensor(){
-    activeReadNoise = true;
+void publishWeatherRead(){
+
+  if(active){
+
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+
+    if (isnan(h) || isnan(t)) {
+      Serial.println(F("Failed to read from DHT sensor!"));
+    } else {
+      doc["deviceId"] = 1;
+      doc["humidity"] = round(h);
+      doc["temperature"] = round(t);
+      doc["timestamp"] = time(nullptr);
+
+      char output[MQTT_MESSAGE_LEN];
+      serializeJson(doc, output);
+      Serial.println(output);
+      mqttClient.publish(SENSORS_TOPIC, 0, false, output);
+    }
+
+  }
+
 }
 
 void WiFiEvent(WiFiEvent_t event) {
@@ -211,9 +234,9 @@ void setup() {
 
   mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
   wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
-  weatherTimer = xTimerCreate("weatherTimer", pdMS_TO_TICKS(10000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(publishWeatherRead));
+  weatherTimer = xTimerCreate("weatherTimer", pdMS_TO_TICKS(6000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(publishWeatherRead));
   sensorsTimer = xTimerCreate("sensorsTimer", pdMS_TO_TICKS(10000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(activeReadSensors));
-  noiseTimer = xTimerCreate("noiseTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(activeNoiseSensor));
+  noiseTimer = xTimerCreate("noiseTimer", pdMS_TO_TICKS(1000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(noiseMonitoring));
 
   WiFi.onEvent(WiFiEvent);
 
@@ -234,34 +257,10 @@ void setup() {
 
 }
 
-void publishWeatherRead(){
-  if(active){
-    float h = dht.readHumidity();
-    float t = dht.readTemperature();
-
-    if (isnan(h) || isnan(t)) {
-      Serial.println(F("Failed to read from DHT sensor!"));
-    } else {
-      doc["deviceId"] = 1;
-      doc["humidity"] = round(h);
-      doc["temperature"] = round(t);
-      doc["timestamp"] = time(nullptr);
-
-      char output[MQTT_MESSAGE_LEN];
-      serializeJson(doc, output);
-      Serial.println(output);
-      mqttClient.publish(SENSORS_TOPIC, 0, false, output);
-    }
-
-    xTimerStart(weatherTimer, 0);
-  }
-
-}
 
 void loop() {
 
-  noiseMonitoring();
+  vTaskDelay(10000);
+  publishWeatherRead();
 
-  //if(active){
-  //}
 }
