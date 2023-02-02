@@ -1,3 +1,4 @@
+#include "ble.h"
 #include <WiFi.h>
 extern "C" {
 	#include "freertos/FreeRTOS.h"
@@ -8,6 +9,16 @@ extern "C" {
 #include "DHT.h"
 #include <driver/adc.h>
 #include <esp_adc_cal.h>
+
+bool deviceConnected = false;
+
+Preferences preferences;
+
+#define DEVICE_NAME "01ESP32LAB"
+
+uint32_t value = 0;
+
+Ble ble = Ble(DEVICE_NAME, preferences);
 
 esp_adc_cal_characteristics_t adc_cal; //Estrutura que contem as informacoes para calibracao
 
@@ -20,24 +31,28 @@ const char* TZ_INFO    = "BRST+3BRDT+2,M10.3.0,M2.3.0";  // enter your time zone
 
 //#define WIFI_SSID "HOME"
 //#define WIFI_PASSWORD "@M11g06c96#"
-#define WIFI_SSID "phgalaxy"
-#define WIFI_PASSWORD "paulohenrique"
+//#define WIFI_SSID "phgalaxy"
+//#define WIFI_PASSWORD "paulohenrique"
+
+String ssid;
+String password;
+long deviceId;
+boolean active = false;
 
 //#define MQTT_HOST IPAddress(192, 168, 1, 10)
 #define MQTT_HOST "test.mosquitto.org"
 #define MQTT_PORT 1883
 
-#define MQTT_CLIENT_ID "ESP32Phcn"
+#define MQTT_CLIENT_ID "ESP32PhcnTeste"
 #define MQTT_MESSAGE_LEN 128
 #define SENSORS_TOPIC MQTT_CLIENT_ID "/sensors"
-#define NOISE_TOPIC MQTT_CLIENT_ID "/noise"
-#define DEVICE_ID "01ESP32"
-
+#define NOISE_TOPIC MQTT_CLIENT_ID "/noises"
 
 
 DHT dht(DHTPIN, DHTTYPE);
 
 StaticJsonDocument<MQTT_MESSAGE_LEN> doc;
+StaticJsonDocument<64> docNoise;
 
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
@@ -45,15 +60,53 @@ TimerHandle_t wifiReconnectTimer;
 TimerHandle_t sensorsTimer;
 TimerHandle_t noiseTimer;
 
-boolean active = false;
+bool setWifiCredentials(){
+
+  preferences.begin("credentials", false);
+  String s = preferences.getString("ssid", "");
+  String p = preferences.getString("password", "");
+  preferences.end();
+
+  if(s == "" || p == "") return false;
+
+  ssid = s;
+  password = p;
+
+  return true;
+}
+
+bool setDeviceId(){
+
+  preferences.begin("info", false);
+  long id = preferences.getLong("deviceId", 0);
+  preferences.end();
+
+  if(id == 0) return false;
+  
+  deviceId = id;
+}
+
+void saveDeviceName(){
+  preferences.begin("info", false);
+  preferences.putString("deviceName", DEVICE_NAME);
+  preferences.end();
+}
 
 void connectToWifi() {
-  Serial.println("Connecting to Wi-Fi...");
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.println("Conectando ao Wi-Fi...");
+  preferences.begin("credentials", false);
+  String ssid = preferences.getString("ssid", "");
+  String password = preferences.getString("password", "");
+  preferences.end();
+
+  Serial.println(ssid);
+  Serial.println(password);
+  WiFi.begin(ssid.c_str(), password.c_str());
+  //WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 }
 
 void connectToMqtt() {
-  Serial.println("Connecting to MQTT...");
+  Serial.println("Conectando ao servidor MQTT...");
   mqttClient.connect();
 }
 
@@ -96,11 +149,16 @@ void noiseMonitoring(){
 
     if(noise > 2300){
 
-      char output[35];
-      sprintf(output, "{deviceId:1,timestamp:%u}", time(nullptr));
+      //char output[35];
+      //sprintf(output, "{\"deviceId\":%d,\"timestamp\":%u}", deviceId, time(nullptr));
+      docNoise["deviceId"] = deviceId;
+      docNoise["timestamp"] = time(nullptr);
+
+      char output[64];
+      serializeJson(docNoise, output);
       Serial.print("noise up! ");
       Serial.println(output);
-      mqttClient.publish(NOISE_TOPIC, 0, false, output);
+      mqttClient.publish(NOISE_TOPIC, 0, true, output);
       xTimerStart(noiseTimer, 0);
 
     }
@@ -118,7 +176,7 @@ void publishWeatherRead(){
     if (isnan(h) || isnan(t)) {
       Serial.println(F("Failed to read from DHT sensor!"));
     } else {
-      doc["deviceId"] = 1;
+      doc["deviceId"] = deviceId;
       doc["humidity"] = round(h);
       doc["temperature"] = round(t);
       doc["timestamp"] = time(nullptr);
@@ -126,7 +184,7 @@ void publishWeatherRead(){
       char output[MQTT_MESSAGE_LEN];
       serializeJson(doc, output);
       Serial.println(output);
-      mqttClient.publish(SENSORS_TOPIC, 0, false, output);
+      mqttClient.publish(SENSORS_TOPIC, 0, true, output);
     }
 
   }
@@ -221,6 +279,9 @@ void onMqttPublish(uint16_t packetId) {
 }
 
 void setup() {
+
+  saveDeviceName();
+
   Serial.begin(115200);
   Serial.println();
   Serial.println();
@@ -246,18 +307,22 @@ void setup() {
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
   mqttClient.setClientId(MQTT_CLIENT_ID);
 
+  setDeviceId();
+  setWifiCredentials();
   connectToWifi();
+  //if(setDeviceId() || setWifiCredentials()){
+  //}
+
+  ble.start();
 
   configureNoiseSensor();
-
-
 
 }
 
 
 void loop() {
 
-  vTaskDelay(10000);
   publishWeatherRead();
+  vTaskDelay(60000);
 
 }
