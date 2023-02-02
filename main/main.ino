@@ -94,7 +94,13 @@ void saveDeviceName(){
 
 void connectToWifi() {
   Serial.println("Conectando ao Wi-Fi...");
-  setWifiCredentials();
+  preferences.begin("credentials", false);
+  String ssid = preferences.getString("ssid", "");
+  String password = preferences.getString("password", "");
+  preferences.end();
+
+  Serial.println(ssid);
+  Serial.println(password);
   WiFi.begin(ssid.c_str(), password.c_str());
   //WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 }
