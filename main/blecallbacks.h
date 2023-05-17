@@ -12,6 +12,7 @@ class MyServerCallbacks: public BLEServerCallbacks {
 
     void onDisconnect(BLEServer* pServer) {
       deviceConnected = false;
+      pServer->startAdvertising(); // Reiniciar o anúncio BLE após a desconexão
     }
 
     public: 
