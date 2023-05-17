@@ -39,6 +39,7 @@ const char* TZ_INFO    = "BRST+3BRDT+2,M10.3.0,M2.3.0";  // enter your time zone
 String ssid;
 String password;
 long deviceId;
+int noiseThreshold;
 boolean active = false;
 
 //#define MQTT_HOST IPAddress(192, 168, 1, 10)
@@ -88,6 +89,13 @@ bool setDeviceId(){
   deviceId = id;
 }
 
+void setNoiseThreshold(){
+  preferences.begin("info", false);
+  long value = preferences.getInt("noiseThreshold", 2048); // default = 4096/2
+  preferences.end();
+  noiseThreshold = value;
+}
+
 void saveDeviceName(){
   preferences.begin("info", false);
   preferences.putString("deviceName", DEVICE_NAME);
@@ -130,7 +138,7 @@ void deactiveReadSensors(){
 }
 
 void configureNoiseSensor(){
-
+    setNoiseThreshold();
     adc1_config_width(ADC_WIDTH_BIT_12);
     
     // full voltage range
@@ -148,9 +156,11 @@ uint32_t readNoiseSensor(){
 void noiseMonitoring(){
 
     uint32_t noise = readNoiseSensor();
+    setNoiseThreshold();
 
-    if(noise > 2300){
+    if(noise > noiseThreshold){
 
+      setDeviceId();
       //char output[35];
       //sprintf(output, "{\"deviceId\":%d,\"timestamp\":%u}", deviceId, time(nullptr));
       docNoise["deviceId"] = deviceId;
@@ -312,8 +322,6 @@ void setup() {
   setDeviceId();
   setWifiCredentials();
   connectToWifi();
-  //if(setDeviceId() || setWifiCredentials()){
-  //}
 
   ble.start();
 

@@ -96,6 +96,7 @@ class CredentialsCallbacks : public BLECharacteristicCallbacks {
 class DevInfoCallbacks : public BLECharacteristicCallbacks {
 
   Preferences preferences;
+  uint8_t controller;
   
   void onWrite(BLECharacteristic *pCharacteristic) {
 
@@ -103,17 +104,36 @@ class DevInfoCallbacks : public BLECharacteristicCallbacks {
 
     long deviceId = std::strtoul(value.c_str(), NULL, 0);
 
-    if(deviceId > 0){
-      preferences.begin("info", false);
-      preferences.putLong("deviceId", deviceId);
+    if(controller == 1){
+      if(deviceId > 0){
+        preferences.begin("info", false);
+        preferences.putLong("deviceId", deviceId);
 
-      Serial.print("deviceId received: ");
-      Serial.println(deviceId);
-      Serial.println("deviceId Saved using Preferences");
+        Serial.print("deviceId received: ");
+        Serial.println(deviceId);
+        Serial.println("deviceId Saved using Preferences");
+
+        preferences.end();
+        pCharacteristic->setValue("");
+      }
+      controller = 0;
+    }
+    if(controller == 2){
+      preferences.begin("info", false);
+      preferences.putInt("noiseThreshold", std::strtoul(value.c_str(), NULL, 0));
+
+      Serial.print("noiseThreshold received: ");
+      Serial.println(value.c_str());
+      Serial.println("noiseThreshold Saved using Preferences");
 
       preferences.end();
-    }
       pCharacteristic->setValue("");
+      controller = 0;
+    }
+
+    controller = std::strtoul(value.c_str(), NULL, 0);
+    Serial.print("valor do controlador");
+    Serial.println(controller);
   }
 
   void onRead(BLECharacteristic *pCharacteristic) {
@@ -126,6 +146,8 @@ class DevInfoCallbacks : public BLECharacteristicCallbacks {
       info += preferences.getString("deviceName", "vazio");
       info += ";";
       info += preferences.getLong("deviceId", 0);
+      info += ";";
+      info += preferences.getInt("noiseThreshold", 0);
       preferences.end();
 
       pCharacteristic->setValue(info.c_str());
