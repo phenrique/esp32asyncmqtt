@@ -14,7 +14,7 @@ bool deviceConnected = false;
 
 Preferences preferences;
 
-#define DEVICE_NAME "01ESP32LAB"
+#define DEVICE_NAME "LAAI02ESP"
 
 uint32_t value = 0;
 
@@ -43,7 +43,7 @@ int noiseThreshold;
 boolean active = false;
 
 //#define MQTT_HOST IPAddress(192, 168, 1, 10)
-#define MQTT_HOST "test.mosquitto.org"
+#define MQTT_HOST "broker.hivemq.com"
 #define MQTT_PORT 1883
 
 #define MQTT_CLIENT_ID "ESP32PhcnTeste"
@@ -180,26 +180,23 @@ void noiseMonitoring(){
 
 void publishWeatherRead(){
 
-  if(active){
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
 
-    float h = dht.readHumidity();
-    float t = dht.readTemperature();
+  if (isnan(h) || isnan(t)) {
+    Serial.println(F("Failed to read from DHT sensor!"));
+  } else {
+    doc["deviceId"] = deviceId;
+    doc["humidity"] = round(h);
+    doc["temperature"] = round(t);
+    doc["timestamp"] = time(nullptr);
 
-    if (isnan(h) || isnan(t)) {
-      Serial.println(F("Failed to read from DHT sensor!"));
-    } else {
-      doc["deviceId"] = deviceId;
-      doc["humidity"] = round(h);
-      doc["temperature"] = round(t);
-      doc["timestamp"] = time(nullptr);
-
-      char output[MQTT_MESSAGE_LEN];
-      serializeJson(doc, output);
-      Serial.println(output);
-      mqttClient.publish(SENSORS_TOPIC, 0, true, output);
-    }
-
+    char output[MQTT_MESSAGE_LEN];
+    serializeJson(doc, output);
+    Serial.println(output);
+    mqttClient.publish(SENSORS_TOPIC, 0, true, output);
   }
+
 
 }
 
@@ -332,7 +329,9 @@ void setup() {
 
 void loop() {
 
-  publishWeatherRead();
-  vTaskDelay(60000);
+  if(active){
+    publishWeatherRead();
+    vTaskDelay(600000); // 10 * 1min
+  }
 
 }
