@@ -1,8 +1,8 @@
 #include "ble.h"
 
 Ble::Ble(std::string deviceName, Preferences &preferences) {
-  deviceName = deviceName;
-  preferences = preferences;
+  this->deviceName = deviceName;
+  this->preferences = preferences;
 }
 
 void Ble::start() {

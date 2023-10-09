@@ -22,7 +22,6 @@ Ble ble = Ble(DEVICE_NAME, preferences);
 
 esp_adc_cal_characteristics_t adc_cal; //Estrutura que contem as informacoes para calibracao
 
-
 const char* TZ_INFO    = "BRST+3BRDT+2,M10.3.0,M2.3.0";  // enter your time zone (https://remotemonitoringsystems.ca/time-zone-abbreviations.php)
 
 #define GPIO34 ADC1_CHANNEL_6
@@ -31,26 +30,20 @@ const char* TZ_INFO    = "BRST+3BRDT+2,M10.3.0,M2.3.0";  // enter your time zone
 
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
 
-//#define WIFI_SSID "HOME"
-//#define WIFI_PASSWORD "@M11g06c96#"
-//#define WIFI_SSID "phgalaxy"
-//#define WIFI_PASSWORD "paulohenrique"
-
 String ssid;
 String password;
 long deviceId;
 int noiseThreshold;
 boolean active = false;
 
-//#define MQTT_HOST IPAddress(192, 168, 1, 10)
-#define MQTT_HOST "broker.hivemq.com"
+#define MQTT_HOST "200.239.66.45"
 #define MQTT_PORT 1883
 
-#define MQTT_CLIENT_ID "ESP32PhcnTeste"
+#define MQTT_CLIENT_ID DEVICE_NAME 
+#define MQTT_TOPIC_ROOT "ESP32PhcnTeste"
 #define MQTT_MESSAGE_LEN 128
-#define SENSORS_TOPIC MQTT_CLIENT_ID "/sensors"
-#define NOISE_TOPIC MQTT_CLIENT_ID "/noises"
-
+#define SENSORS_TOPIC MQTT_TOPIC_ROOT "/sensors"
+#define NOISE_TOPIC MQTT_TOPIC_ROOT "/noises"
 
 DHT dht(DHTPIN, DHTTYPE);
 
