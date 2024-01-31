@@ -43,7 +43,8 @@ int noiseThreshold;
 boolean active = false;
 
 //#define MQTT_HOST IPAddress(192, 168, 1, 10)
-#define MQTT_HOST "broker.hivemq.com"
+#define LAAI_SERVER_IP "200.239.66.45"
+#define MQTT_HOST LAAI_SERVER_IP 
 #define MQTT_PORT 1883
 
 #define MQTT_CLIENT_ID "ESP32PhcnTeste"
