@@ -14,11 +14,9 @@ bool deviceConnected = false;
 
 Preferences preferences;
 
-#define DEVICE_NAME "LAAI02ESP"
-
 uint32_t value = 0;
 
-Ble ble = Ble(DEVICE_NAME, preferences);
+Ble ble = Ble(preferences);
 
 esp_adc_cal_characteristics_t adc_cal; //Estrutura que contem as informacoes para calibracao
 
@@ -36,10 +34,11 @@ long deviceId;
 int noiseThreshold;
 boolean active = false;
 
-#define MQTT_HOST "200.239.66.45"
+#define LAAI_SERVER_IP "200.239.66.45"
+#define MQTT_HOST LAAI_SERVER_IP 
 #define MQTT_PORT 1883
 
-#define MQTT_CLIENT_ID DEVICE_NAME 
+#define MQTT_CLIENT_ID getDeviceName() 
 #define MQTT_TOPIC_ROOT "ESP32PhcnTeste"
 #define MQTT_MESSAGE_LEN 128
 #define SENSORS_TOPIC MQTT_TOPIC_ROOT "/sensors"
@@ -89,10 +88,11 @@ void setNoiseThreshold(){
   noiseThreshold = value;
 }
 
-void saveDeviceName(){
+const char* getDeviceName(){
   preferences.begin("info", false);
-  preferences.putString("deviceName", DEVICE_NAME);
+  String deviceName = preferences.getString("deviceName", DEFAUT_DEVICE_NAME);
   preferences.end();
+  return deviceName.c_str();
 }
 
 void connectToWifi() {
@@ -281,8 +281,6 @@ void onMqttPublish(uint16_t packetId) {
 }
 
 void setup() {
-
-  saveDeviceName();
 
   Serial.begin(115200);
   Serial.println();

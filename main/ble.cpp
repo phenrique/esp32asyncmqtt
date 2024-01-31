@@ -1,7 +1,6 @@
 #include "ble.h"
 
-Ble::Ble(std::string deviceName, Preferences &preferences) {
-  this->deviceName = deviceName;
+Ble::Ble(Preferences &preferences) {
   this->preferences = preferences;
 }
 
@@ -11,7 +10,10 @@ void Ble::start() {
   uint8_t controller = 0;
 
   // Create the BLE Device
-  BLEDevice::init(deviceName);
+  preferences.begin("info", false);
+  String deviceName = preferences.getString("deviceName", DEFAUT_DEVICE_NAME);
+  BLEDevice::init(deviceName.c_str());
+  preferences.end();
 
   // Create the BLE Server
   BLEServer *pServer = BLEDevice::createServer();
