@@ -18,14 +18,10 @@ uint32_t value = 0;
 
 Ble ble = Ble(preferences);
 
-esp_adc_cal_characteristics_t adc_cal; //Estrutura que contem as informacoes para calibracao
-
-const char* TZ_INFO    = "BRST+3BRDT+2,M10.3.0,M2.3.0";  // enter your time zone (https://remotemonitoringsystems.ca/time-zone-abbreviations.php)
-
+esp_adc_cal_characteristics_t adc_cal; 
+const char* TZ_INFO    = "BRST+3BRDT+2,M10.3.0,M2.3.0";  
 #define GPIO34 ADC1_CHANNEL_6
-
 #define DHTPIN 4    
-
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
 
 String ssid;
@@ -34,10 +30,8 @@ long deviceId;
 int noiseThreshold;
 boolean active = false;
 
-#define LAAI_SERVER_IP "200.239.66.45"
-#define MQTT_HOST LAAI_SERVER_IP 
+#define MQTT_HOST "broker.emqx.io" 
 #define MQTT_PORT 1883
-
 #define MQTT_CLIENT_ID getDeviceName() 
 #define MQTT_TOPIC_ROOT "ESP32PhcnTeste"
 #define MQTT_MESSAGE_LEN 128
@@ -202,7 +196,6 @@ void WiFiEvent(WiFiEvent_t event) {
         Serial.println(WiFi.localIP());
         connectToMqtt();
 
-
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
         Serial.println("WiFi lost connection");
@@ -314,15 +307,11 @@ void setup() {
   ble.start();
 
   configureNoiseSensor();
-
 }
 
-
 void loop() {
-
   if(active){
     publishWeatherRead();
     vTaskDelay(600000); // 10 * 1min
   }
-
 }

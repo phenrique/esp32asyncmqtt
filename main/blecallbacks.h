@@ -1,7 +1,6 @@
 #include <Preferences.h>
 #include <BLEUtils.h>
 
-
 class MyServerCallbacks: public BLEServerCallbacks {
 
     bool deviceConnected;
@@ -166,7 +165,6 @@ class DevInfoCallbacks : public BLECharacteristicCallbacks {
 
       Serial.print("Leu usando preferencias: ");
       Serial.println(info);
-
   }
 
   public:
