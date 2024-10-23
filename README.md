@@ -1,6 +1,15 @@
+Placa ESP32
+software: v2.0.11
+
 Bibliotecas necessárias:
 
-BLE
-
-Async MQTT client for ESP8266 and ESP32
-async-mqtt-client: v0.9.0
+Preferences: v2.0.0
+ESP32 BLE Arduino: v2.0.0
+WiFi: v2.0.0
+AsyncTCP: v1.1.1
+  https://github.com/me-no-dev/AsyncTCP
+ArduinoJson: 6.19.4
+DHT sensor library: v1.4.4
+Adafruit Unified Sensorv 1.1.5
+AsyncMqttClient: v0.9.0
+  https://github.com/marvinroger/async-mqtt-client
