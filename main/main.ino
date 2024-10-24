@@ -30,10 +30,10 @@ long deviceId;
 int noiseThreshold;
 boolean active = false;
 
-#define MQTT_HOST "broker.emqx.io" 
+#define MQTT_HOST "200.239.66.45" 
 #define MQTT_PORT 1883
-#define MQTT_CLIENT_ID "phEsp32dev01" // cada dispositivo deve ter um id diferente 
-#define MQTT_TOPIC_ROOT "ESP32PhcnTeste" // brokers como elipse e emqx nao permitem varios clientes por topico
+#define MQTT_CLIENT_ID "esp32PHdevice22" // cada dispositivo deve ter um id diferente 
+#define MQTT_TOPIC_ROOT "ESP32PhcnTeste" 
 #define MQTT_MESSAGE_LEN 128
 #define SENSORS_TOPIC MQTT_TOPIC_ROOT "/sensors"
 #define NOISE_TOPIC MQTT_TOPIC_ROOT "/noises"
