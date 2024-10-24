@@ -14,7 +14,7 @@ bool deviceConnected = false;
 
 Preferences preferences;
 
-#define DEVICE_NAME "01ESP32LAB"
+#define DEVICE_NAME "02ESP32LAB"
 
 uint32_t value = 0;
 
@@ -43,7 +43,7 @@ int noiseThreshold;
 boolean active = false;
 
 //#define MQTT_HOST IPAddress(192, 168, 1, 10)
-#define MQTT_HOST "test.mosquitto.org"
+#define MQTT_HOST "broker.emqx.io"
 #define MQTT_PORT 1883
 
 #define MQTT_CLIENT_ID "ESP32PhcnTeste"
@@ -206,7 +206,7 @@ void publishWeatherRead(){
 void WiFiEvent(WiFiEvent_t event) {
     Serial.printf("[WiFi-event] event: %d\n", event);
     switch(event) {
-    case SYSTEM_EVENT_STA_GOT_IP:
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
         Serial.println("WiFi connected");
         Serial.println("IP address: ");
         Serial.println(WiFi.localIP());
@@ -214,7 +214,7 @@ void WiFiEvent(WiFiEvent_t event) {
 
 
         break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
+    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
         Serial.println("WiFi lost connection");
         xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
         active = false; // desativa as leituras caso o Wi-Fi esteja desconectado

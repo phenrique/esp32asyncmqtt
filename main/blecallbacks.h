@@ -30,7 +30,7 @@ class CredentialsCallbacks : public BLECharacteristicCallbacks {
 
   void onWrite(BLECharacteristic *pCharacteristic) {
 
-    std::string value = pCharacteristic->getValue();
+    String value = pCharacteristic->getValue();
 
     if(controller == 1){
       preferences.begin("credentials", false);
@@ -100,7 +100,7 @@ class DevInfoCallbacks : public BLECharacteristicCallbacks {
   
   void onWrite(BLECharacteristic *pCharacteristic) {
 
-    std::string value = pCharacteristic->getValue();
+    String value = pCharacteristic->getValue();
 
     long deviceId = std::strtoul(value.c_str(), NULL, 0);
 

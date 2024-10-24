@@ -10,10 +10,10 @@
 
 class Ble {
 public:
-  Ble(std::string deviceName, Preferences &preferences);
+  Ble(String deviceName, Preferences &preferences);
   void start();
 
 private:
-  std::string deviceName;
+  String deviceName;
   Preferences preferences;
 };

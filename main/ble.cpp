@@ -1,6 +1,6 @@
 #include "ble.h"
 
-Ble::Ble(std::string deviceName, Preferences &preferences) {
+Ble::Ble(String deviceName, Preferences &preferences) {
   deviceName = deviceName;
   preferences = preferences;
 }
