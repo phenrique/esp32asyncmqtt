@@ -32,8 +32,8 @@ boolean active = false;
 
 #define MQTT_HOST "broker.emqx.io" 
 #define MQTT_PORT 1883
-#define MQTT_CLIENT_ID getDeviceName() 
-#define MQTT_TOPIC_ROOT "ESP32PhcnTeste"
+#define MQTT_CLIENT_ID "phEsp32dev01" // cada dispositivo deve ter um id diferente 
+#define MQTT_TOPIC_ROOT "ESP32PhcnTeste" // brokers como elipse e emqx nao permitem varios clientes por topico
 #define MQTT_MESSAGE_LEN 128
 #define SENSORS_TOPIC MQTT_TOPIC_ROOT "/sensors"
 #define NOISE_TOPIC MQTT_TOPIC_ROOT "/noises"
@@ -80,13 +80,6 @@ void setNoiseThreshold(){
   long value = preferences.getInt("noiseThreshold", 2048); // default = 4096/2
   preferences.end();
   noiseThreshold = value;
-}
-
-const char* getDeviceName(){
-  preferences.begin("info", false);
-  String deviceName = preferences.getString("deviceName", DEFAUT_DEVICE_NAME);
-  preferences.end();
-  return deviceName.c_str();
 }
 
 void connectToWifi() {

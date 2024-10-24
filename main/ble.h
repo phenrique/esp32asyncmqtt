@@ -16,5 +16,5 @@ public:
   void start();
 
 private:
-  Preferences preferences;
+  Preferences &preferences;
 };

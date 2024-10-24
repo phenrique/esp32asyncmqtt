@@ -1,6 +1,6 @@
 #include "ble.h"
 
-Ble::Ble(Preferences &preferences) {
+Ble::Ble(Preferences &preferences) : preferences(preferences) {
   this->preferences = preferences;
 }
 
