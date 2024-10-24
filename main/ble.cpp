@@ -1,8 +1,7 @@
 #include "ble.h"
 
-Ble::Ble(String deviceName, Preferences &preferences) {
-  deviceName = deviceName;
-  preferences = preferences;
+Ble::Ble(Preferences &preferences) {
+  this->preferences = preferences;
 }
 
 void Ble::start() {
@@ -11,7 +10,10 @@ void Ble::start() {
   uint8_t controller = 0;
 
   // Create the BLE Device
-  BLEDevice::init(deviceName);
+  preferences.begin("info", false);
+  String deviceName = preferences.getString("deviceName", DEFAUT_DEVICE_NAME);
+  preferences.end();
+  BLEDevice::init(deviceName.c_str());
 
   // Create the BLE Server
   BLEServer *pServer = BLEDevice::createServer();
@@ -22,16 +24,15 @@ void Ble::start() {
 
   // Create a BLE Characteristic
   BLECharacteristic *pCredentialsCharacteristic =
-      pService->createCharacteristic(SSID_CHRTIC_UUID,
+      pService->createCharacteristic(CREDENDIAL_CHRTIC_UUID,
                                      BLECharacteristic::PROPERTY_READ |
                                          BLECharacteristic::PROPERTY_WRITE);
 
   BLECharacteristic *pDevInfoCharacteristic = pService->createCharacteristic(
-      PASSWD_CHRTIC_UUID,
+      INFO_CHRTIC_UUID,
       BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
 
-  pCredentialsCharacteristic->setCallbacks(
-      new CredentialsCallbacks(preferences, controller));
+  pCredentialsCharacteristic->setCallbacks(new CredentialsCallbacks(preferences, controller));
   pCredentialsCharacteristic->addDescriptor(new BLE2902());
 
   pDevInfoCharacteristic->setCallbacks(new DevInfoCallbacks(preferences));

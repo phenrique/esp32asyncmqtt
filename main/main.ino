@@ -14,27 +14,15 @@ bool deviceConnected = false;
 
 Preferences preferences;
 
-#define DEVICE_NAME "02ESP32LAB"
-
 uint32_t value = 0;
 
-Ble ble = Ble(DEVICE_NAME, preferences);
+Ble ble = Ble(preferences);
 
-esp_adc_cal_characteristics_t adc_cal; //Estrutura que contem as informacoes para calibracao
-
-
-const char* TZ_INFO    = "BRST+3BRDT+2,M10.3.0,M2.3.0";  // enter your time zone (https://remotemonitoringsystems.ca/time-zone-abbreviations.php)
-
+esp_adc_cal_characteristics_t adc_cal; 
+const char* TZ_INFO    = "BRST+3BRDT+2,M10.3.0,M2.3.0";  
 #define GPIO34 ADC1_CHANNEL_6
-
 #define DHTPIN 4    
-
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
-
-//#define WIFI_SSID "HOME"
-//#define WIFI_PASSWORD "@M11g06c96#"
-//#define WIFI_SSID "phgalaxy"
-//#define WIFI_PASSWORD "paulohenrique"
 
 String ssid;
 String password;
@@ -42,15 +30,13 @@ long deviceId;
 int noiseThreshold;
 boolean active = false;
 
-//#define MQTT_HOST IPAddress(192, 168, 1, 10)
-#define MQTT_HOST "broker.emqx.io"
+#define MQTT_HOST "broker.emqx.io" 
 #define MQTT_PORT 1883
-
-#define MQTT_CLIENT_ID "ESP32PhcnTeste"
+#define MQTT_CLIENT_ID getDeviceName() 
+#define MQTT_TOPIC_ROOT "ESP32PhcnTeste"
 #define MQTT_MESSAGE_LEN 128
-#define SENSORS_TOPIC MQTT_CLIENT_ID "/sensors"
-#define NOISE_TOPIC MQTT_CLIENT_ID "/noises"
-
+#define SENSORS_TOPIC MQTT_TOPIC_ROOT "/sensors"
+#define NOISE_TOPIC MQTT_TOPIC_ROOT "/noises"
 
 DHT dht(DHTPIN, DHTTYPE);
 
@@ -96,10 +82,11 @@ void setNoiseThreshold(){
   noiseThreshold = value;
 }
 
-void saveDeviceName(){
+const char* getDeviceName(){
   preferences.begin("info", false);
-  preferences.putString("deviceName", DEVICE_NAME);
+  String deviceName = preferences.getString("deviceName", DEFAUT_DEVICE_NAME);
   preferences.end();
+  return deviceName.c_str();
 }
 
 void connectToWifi() {
@@ -180,26 +167,23 @@ void noiseMonitoring(){
 
 void publishWeatherRead(){
 
-  if(active){
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
 
-    float h = dht.readHumidity();
-    float t = dht.readTemperature();
+  if (isnan(h) || isnan(t)) {
+    Serial.println(F("Failed to read from DHT sensor!"));
+  } else {
+    doc["deviceId"] = deviceId;
+    doc["humidity"] = round(h);
+    doc["temperature"] = round(t);
+    doc["timestamp"] = time(nullptr);
 
-    if (isnan(h) || isnan(t)) {
-      Serial.println(F("Failed to read from DHT sensor!"));
-    } else {
-      doc["deviceId"] = deviceId;
-      doc["humidity"] = round(h);
-      doc["temperature"] = round(t);
-      doc["timestamp"] = time(nullptr);
-
-      char output[MQTT_MESSAGE_LEN];
-      serializeJson(doc, output);
-      Serial.println(output);
-      mqttClient.publish(SENSORS_TOPIC, 0, true, output);
-    }
-
+    char output[MQTT_MESSAGE_LEN];
+    serializeJson(doc, output);
+    Serial.println(output);
+    mqttClient.publish(SENSORS_TOPIC, 0, true, output);
   }
+
 
 }
 
@@ -211,7 +195,6 @@ void WiFiEvent(WiFiEvent_t event) {
         Serial.println("IP address: ");
         Serial.println(WiFi.localIP());
         connectToMqtt();
-
 
         break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
@@ -292,8 +275,6 @@ void onMqttPublish(uint16_t packetId) {
 
 void setup() {
 
-  saveDeviceName();
-
   Serial.begin(115200);
   Serial.println();
   Serial.println();
@@ -326,13 +307,11 @@ void setup() {
   ble.start();
 
   configureNoiseSensor();
-
 }
 
-
 void loop() {
-
-  publishWeatherRead();
-  vTaskDelay(60000);
-
+  if(active){
+    publishWeatherRead();
+    vTaskDelay(600000); // 10 * 1min
+  }
 }
