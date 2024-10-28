@@ -32,7 +32,7 @@ boolean active = false;
 
 #define MQTT_HOST "200.239.66.45" 
 #define MQTT_PORT 1883
-#define MQTT_CLIENT_ID "esp32PHdevice22" // cada dispositivo deve ter um id diferente 
+#define MQTT_CLIENT_ID "02_device_02" // cada dispositivo deve ter um id diferente 
 #define MQTT_TOPIC_ROOT "ESP32PhcnTeste" 
 #define MQTT_MESSAGE_LEN 128
 #define SENSORS_TOPIC MQTT_TOPIC_ROOT "/sensors"
@@ -221,6 +221,7 @@ void onMqttConnect(bool sessionPresent) {
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
   Serial.println("Disconnected from MQTT.");
+  Serial.println("Motivo:");
   deactiveReadSensors();
 
   if (WiFi.isConnected()) {
