@@ -9,8 +9,7 @@ extern "C" {
 #include <AsyncMqttClient.h>
 #include <ArduinoJson.h>
 #include "DHT.h"
-#include <driver/adc.h>
-#include <esp_adc_cal.h>
+#include "NoiseSensor.h"
 
 bool deviceConnected = false;
 
@@ -20,9 +19,9 @@ uint32_t value = 0;
 
 Ble ble = Ble(preferences);
 
-esp_adc_cal_characteristics_t adc_cal; 
+NoiseSensor noiseSensor;
+
 const char* TZ_INFO    = "BRST+3BRDT+2,M10.3.0,M2.3.0";  
-#define GPIO34 ADC1_CHANNEL_6
 #define DHTPIN 4    
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
 
@@ -34,7 +33,7 @@ boolean active = false;
 
 #define MQTT_HOST "200.239.66.45" 
 #define MQTT_PORT 1883
-#define MQTT_CLIENT_ID "02_device_02" // cada dispositivo deve ter um id diferente 
+#define MQTT_CLIENT_ID "01_device_01" // cada dispositivo deve ter um id diferente 
 #define MQTT_TOPIC_ROOT "ESP32PhcnTeste" 
 #define MQTT_MESSAGE_LEN 128
 #define SENSORS_TOPIC MQTT_TOPIC_ROOT "/sensors"
@@ -116,25 +115,10 @@ void deactiveReadSensors(){
 
 }
 
-void configureNoiseSensor(){
-    setNoiseThreshold();
-    adc1_config_width(ADC_WIDTH_BIT_12);
-    
-    // full voltage range
-    adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_12);
-    
-    esp_adc_cal_value_t adc_type = esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_12, ADC_WIDTH_BIT_12, 1100, &adc_cal);//Inicializa a estrutura de calibracao
-
-}
-
-uint32_t readNoiseSensor(){
-  uint32_t voltage = adc1_get_raw(ADC1_CHANNEL_6);//Converte e calibra o valor lido (RAW) para mV
-  return esp_adc_cal_raw_to_voltage(voltage, &adc_cal);//Converte e calibra o valor lido (RAW) para mV
-}
 
 void noiseMonitoring(){
 
-    uint32_t noise = readNoiseSensor();
+    uint32_t noise = noiseSensor.read();
     setNoiseThreshold();
 
     if(noise > noiseThreshold){
@@ -277,9 +261,7 @@ void setup() {
   setenv("TZ", TZ_INFO, 1);
 
   dht.begin();
-
-  configureNoiseSensor();
-
+  noiseSensor.begin();
      // delete old config
   WiFi.disconnect(true);
   delay(2000);
