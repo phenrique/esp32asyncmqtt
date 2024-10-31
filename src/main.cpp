@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 #include "ble.h"
 #include <WiFi.h>
 extern "C" {
@@ -64,22 +66,16 @@ bool setWifiCredentials(){
   return true;
 }
 
-bool setDeviceId(){
-
+void setDeviceId(){
   preferences.begin("info", false);
-  long id = preferences.getLong("deviceId", 0);
+  deviceId = preferences.getLong("deviceId", 0);
   preferences.end();
-
-  if(id == 0) return false;
-  
-  deviceId = id;
 }
 
 void setNoiseThreshold(){
   preferences.begin("info", false);
-  long value = preferences.getInt("noiseThreshold", 2048); // default = 4096/2
+  noiseThreshold = preferences.getInt("noiseThreshold", 2048); // default = 4096/2
   preferences.end();
-  noiseThreshold = value;
 }
 
 void connectToWifi() {
@@ -91,8 +87,11 @@ void connectToWifi() {
 
   Serial.println(ssid);
   Serial.println(password);
+  WiFi.disconnect();
+  vTaskDelay(1000);
   WiFi.begin(ssid.c_str(), password.c_str());
-  //WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.setSleep(false);
+  vTaskDelay(3000);
 }
 
 void connectToMqtt() {
@@ -122,9 +121,9 @@ void configureNoiseSensor(){
     adc1_config_width(ADC_WIDTH_BIT_12);
     
     // full voltage range
-    adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11);
+    adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_12);
     
-    esp_adc_cal_value_t adc_type = esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1100, &adc_cal);//Inicializa a estrutura de calibracao
+    esp_adc_cal_value_t adc_type = esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_12, ADC_WIDTH_BIT_12, 1100, &adc_cal);//Inicializa a estrutura de calibracao
 
 }
 
@@ -192,6 +191,7 @@ void WiFiEvent(WiFiEvent_t event) {
         break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
         Serial.println("WiFi lost connection");
+        WiFi.disconnect(true);
         xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
         active = false; // desativa as leituras caso o Wi-Fi esteja desconectado
         xTimerStart(wifiReconnectTimer, 0);
@@ -278,12 +278,20 @@ void setup() {
 
   dht.begin();
 
+  configureNoiseSensor();
+
+     // delete old config
+  WiFi.disconnect(true);
+  delay(2000);
+
+  WiFi.onEvent(WiFiEvent);
+
   mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
-  wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
+  wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(3000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
   sensorsTimer = xTimerCreate("sensorsTimer", pdMS_TO_TICKS(10000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(activeReadSensors));
   noiseTimer = xTimerCreate("noiseTimer", pdMS_TO_TICKS(1000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(noiseMonitoring));
 
-  WiFi.onEvent(WiFiEvent);
+
 
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
@@ -296,11 +304,12 @@ void setup() {
 
   setDeviceId();
   setWifiCredentials();
-  connectToWifi();
-
+  connectToWifi(); 
+  
   ble.start();
 
-  configureNoiseSensor();
+  delay(1000);
+
 }
 
 void loop() {
