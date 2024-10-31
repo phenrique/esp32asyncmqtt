@@ -9,7 +9,7 @@ extern "C" {
 #include <AsyncMqttClient.h>
 #include <ArduinoJson.h>
 #include "DHT.h"
-#include "NoiseSensor.h"
+#include "NoiseSensor/NoiseSensor.h"
 
 bool deviceConnected = false;
 
