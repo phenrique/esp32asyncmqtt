@@ -33,7 +33,7 @@ boolean active = false;
 
 #define MQTT_HOST "200.239.66.45" 
 #define MQTT_PORT 1883
-#define MQTT_CLIENT_ID "01_device_01" // cada dispositivo deve ter um id diferente 
+#define MQTT_CLIENT_ID "testEsp32Device-01" // cada dispositivo deve ter um id diferente 
 #define MQTT_TOPIC_ROOT "ESP32PhcnTeste" 
 #define MQTT_MESSAGE_LEN 128
 #define SENSORS_TOPIC MQTT_TOPIC_ROOT "/sensors"
@@ -118,7 +118,7 @@ void deactiveReadSensors(){
 
 void noiseMonitoring(){
 
-    uint32_t noise = noiseSensor.read();
+    uint32_t noise = noiseSensor.readSmooth();
     setNoiseThreshold();
 
     if(noise > noiseThreshold){
@@ -262,6 +262,7 @@ void setup() {
 
   dht.begin();
   noiseSensor.begin();
+  noiseSensor.beginSmoothing();
      // delete old config
   WiFi.disconnect(true);
   delay(2000);

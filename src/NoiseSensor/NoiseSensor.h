@@ -10,7 +10,9 @@ class NoiseSensor
 public:
     NoiseSensor();
     void begin();
+    void beginSmoothing();
     u_int32_t read();
+    u_int32_t readSmooth();
 };
 
 #endif
