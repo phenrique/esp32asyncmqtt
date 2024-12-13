@@ -1,10 +1,11 @@
 #include <Arduino.h>
 
 #include "ble.h"
-#include <WiFi.h>
-extern "C" {
-	#include "freertos/FreeRTOS.h"
-	#include "freertos/timers.h"
+#include "WifiManager/WifiManager.h"
+extern "C"
+{
+#include "freertos/FreeRTOS.h"
+#include "freertos/timers.h"
 }
 #include <AsyncMqttClient.h>
 #include <ArduinoJson.h>
@@ -17,13 +18,17 @@ Preferences preferences;
 
 uint32_t value = 0;
 
+WifiManager wifiManager;
+
 Ble ble = Ble(preferences);
 
 NoiseSensor noiseSensor;
 
-const char* TZ_INFO    = "BRST+3BRDT+2,M10.3.0,M2.3.0";  
-#define DHTPIN 4    
-#define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
+// const char* TZ_INFO    = "BRST+3BRDT+2,M10.3.0,M2.3.0";  // com fuso horário
+const char *TZ_INFO = "BRT3";
+
+#define DHTPIN 4
+#define DHTTYPE DHT22 // DHT 22  (AM2302), AM2321
 
 String ssid;
 String password;
@@ -31,10 +36,10 @@ long deviceId;
 int noiseThreshold;
 boolean active = false;
 
-#define MQTT_HOST "200.239.66.45" 
+#define MQTT_HOST "200.239.66.45"
 #define MQTT_PORT 1883
-#define MQTT_CLIENT_ID "testEsp32Device-01" // cada dispositivo deve ter um id diferente 
-#define MQTT_TOPIC_ROOT "ESP32PhcnTeste" 
+#define MQTT_CLIENT_ID "testEsp32Device-01" // cada dispositivo deve ter um id diferente
+#define MQTT_TOPIC_ROOT "ESP32PhcnTeste"
 #define MQTT_MESSAGE_LEN 128
 #define SENSORS_TOPIC MQTT_TOPIC_ROOT "/sensors"
 #define NOISE_TOPIC MQTT_TOPIC_ROOT "/noises"
@@ -46,109 +51,84 @@ StaticJsonDocument<64> docNoise;
 
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
-TimerHandle_t wifiReconnectTimer;
 TimerHandle_t sensorsTimer;
 TimerHandle_t noiseTimer;
 
-bool setWifiCredentials(){
-
-  preferences.begin("credentials", false);
-  String s = preferences.getString("ssid", "");
-  String p = preferences.getString("password", "");
-  preferences.end();
-
-  if(s == "" || p == "") return false;
-
-  ssid = s;
-  password = p;
-
-  return true;
-}
-
-void setDeviceId(){
+void setDeviceId()
+{
   preferences.begin("info", false);
   deviceId = preferences.getLong("deviceId", 0);
   preferences.end();
 }
 
-void setNoiseThreshold(){
+void setNoiseThreshold()
+{
   preferences.begin("info", false);
   noiseThreshold = preferences.getInt("noiseThreshold", 2048); // default = 4096/2
   preferences.end();
 }
 
-void connectToWifi() {
-  Serial.println("Conectando ao Wi-Fi...");
-  preferences.begin("credentials", false);
-  String ssid = preferences.getString("ssid", "");
-  String password = preferences.getString("password", "");
-  preferences.end();
-
-  Serial.println(ssid);
-  Serial.println(password);
-  WiFi.disconnect();
-  vTaskDelay(1000);
-  WiFi.begin(ssid.c_str(), password.c_str());
-  WiFi.setSleep(false);
-  vTaskDelay(3000);
-}
-
-void connectToMqtt() {
+void connectToMqtt()
+{
   Serial.println("Conectando ao servidor MQTT...");
   mqttClient.connect();
 }
 
-void activeReadSensors(){
+void activeReadSensors()
+{
 
   Serial.println("Iniciando leitura dos sensores");
   active = true;
   xTimerStart(noiseTimer, 0);
   xTimerStop(sensorsTimer, 0);
-
 }
 
-void deactiveReadSensors(){
+void deactiveReadSensors()
+{
 
   Serial.println("Interrompendo leitura dos sensores");
   active = false;
   xTimerStop(noiseTimer, 0); // desativa as leituras caso o Wi-Fi esteja desconectado
-
 }
 
+void noiseMonitoring()
+{
 
-void noiseMonitoring(){
+  uint32_t noise = noiseSensor.readSmooth();
+  setNoiseThreshold();
 
-    uint32_t noise = noiseSensor.readSmooth();
-    setNoiseThreshold();
+  if (noise > noiseThreshold)
+  {
 
-    if(noise > noiseThreshold){
+    setDeviceId();
+    // char output[35];
+    // sprintf(output, "{\"deviceId\":%d,\"timestamp\":%u}", deviceId, time(nullptr));
+    docNoise["deviceId"] = deviceId;
+    docNoise["timestamp"] = time(nullptr);
 
-      setDeviceId();
-      //char output[35];
-      //sprintf(output, "{\"deviceId\":%d,\"timestamp\":%u}", deviceId, time(nullptr));
-      docNoise["deviceId"] = deviceId;
-      docNoise["timestamp"] = time(nullptr);
-
-      char output[64];
-      serializeJson(docNoise, output);
-      Serial.print("noise up! ");
-      Serial.println(output);
-      mqttClient.publish(NOISE_TOPIC, 0, true, output);
-      xTimerStart(noiseTimer, 0);
-
-    }
-
+    char output[64];
+    serializeJson(docNoise, output);
+    Serial.print("noise up! ");
+    Serial.println(output);
+    mqttClient.publish(NOISE_TOPIC, 0, true, output);
     xTimerStart(noiseTimer, 0);
+  }
+
+  xTimerStart(noiseTimer, 0);
 }
 
-void publishWeatherRead(){
+void publishWeatherRead()
+{
 
   float h = dht.readHumidity();
   float t = dht.readTemperature();
 
-  if (isnan(h) || isnan(t)) {
+  if (isnan(h) || isnan(t))
+  {
     Serial.println(F("Failed to read from DHT sensor!"));
-  } else {
+  }
+  else
+  {
     doc["deviceId"] = deviceId;
     doc["humidity"] = round(h);
     doc["temperature"] = round(t);
@@ -159,31 +139,32 @@ void publishWeatherRead(){
     Serial.println(output);
     mqttClient.publish(SENSORS_TOPIC, 0, true, output);
   }
-
-
 }
 
-void WiFiEvent(WiFiEvent_t event) {
-    Serial.printf("[WiFi-event] event: %d\n", event);
-    switch(event) {
-    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-        Serial.println("WiFi connected");
-        Serial.println("IP address: ");
-        Serial.println(WiFi.localIP());
-        connectToMqtt();
+void WiFiEvent(WiFiEvent_t event)
+{
+  Serial.printf("[WiFi-event] event: %d\n", event);
+  switch (event)
+  {
+  case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+    Serial.println("WiFi connected");
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP());
+    connectToMqtt();
 
-        break;
-    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-        Serial.println("WiFi lost connection");
-        WiFi.disconnect(true);
-        xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
-        active = false; // desativa as leituras caso o Wi-Fi esteja desconectado
-        xTimerStart(wifiReconnectTimer, 0);
-        break;
-    }
+    break;
+  case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+    Serial.println("WiFi lost connection");
+    wifiManager.disconnect();          // Precisamos limpar a conexão antes de tentar reconectar
+    xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
+    active = false;                    // desativa as leituras caso o Wi-Fi esteja desconectado
+    wifiManager.reconnect();           // Espera o timer definido e depois tenta reconectar
+    break;
+  }
 }
 
-void onMqttConnect(bool sessionPresent) {
+void onMqttConnect(bool sessionPresent)
+{
   Serial.println("Connected to MQTT.");
   Serial.print("Session present: ");
   Serial.println(sessionPresent);
@@ -203,17 +184,20 @@ void onMqttConnect(bool sessionPresent) {
   xTimerStart(sensorsTimer, 0);
 }
 
-void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
+void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
+{
   Serial.println("Disconnected from MQTT.");
   Serial.println("Motivo:");
   deactiveReadSensors();
 
-  if (WiFi.isConnected()) {
+  if (WiFi.isConnected())
+  {
     xTimerStart(mqttReconnectTimer, 0);
   }
 }
 
-void onMqttSubscribe(uint16_t packetId, uint8_t qos) {
+void onMqttSubscribe(uint16_t packetId, uint8_t qos)
+{
   Serial.println("Subscribe acknowledged.");
   Serial.print("  packetId: ");
   Serial.println(packetId);
@@ -221,13 +205,15 @@ void onMqttSubscribe(uint16_t packetId, uint8_t qos) {
   Serial.println(qos);
 }
 
-void onMqttUnsubscribe(uint16_t packetId) {
+void onMqttUnsubscribe(uint16_t packetId)
+{
   Serial.println("Unsubscribe acknowledged.");
   Serial.print("  packetId: ");
   Serial.println(packetId);
 }
 
-void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
+void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
+{
   Serial.println("Publish received.");
   Serial.print("  topic: ");
   Serial.println(topic);
@@ -245,36 +231,34 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
   Serial.println(total);
 }
 
-void onMqttPublish(uint16_t packetId) {
+void onMqttPublish(uint16_t packetId)
+{
   Serial.println("Publish acknowledged.");
   Serial.print("  packetId: ");
   Serial.println(packetId);
 }
 
-void setup() {
+void setup()
+{
 
   Serial.begin(115200);
   Serial.println();
   Serial.println();
 
-  configTime (0, 0, "pool.ntp.org", "time.nist.gov");
   setenv("TZ", TZ_INFO, 1);
+  tzset();
+
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
 
   dht.begin();
   noiseSensor.begin();
   noiseSensor.beginSmoothing();
-     // delete old config
-  WiFi.disconnect(true);
-  delay(2000);
 
-  WiFi.onEvent(WiFiEvent);
+  wifiManager.begin(WiFiEvent);
 
-  mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
-  wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(3000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
-  sensorsTimer = xTimerCreate("sensorsTimer", pdMS_TO_TICKS(10000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(activeReadSensors));
-  noiseTimer = xTimerCreate("noiseTimer", pdMS_TO_TICKS(1000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(noiseMonitoring));
-
-
+  mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
+  sensorsTimer = xTimerCreate("sensorsTimer", pdMS_TO_TICKS(10000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(activeReadSensors));
+  noiseTimer = xTimerCreate("noiseTimer", pdMS_TO_TICKS(1000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(noiseMonitoring));
 
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
@@ -286,17 +270,16 @@ void setup() {
   mqttClient.setClientId(MQTT_CLIENT_ID);
 
   setDeviceId();
-  setWifiCredentials();
-  connectToWifi(); 
-  
+
   ble.start();
 
   delay(1000);
-
 }
 
-void loop() {
-  if(active){
+void loop()
+{
+  if (active)
+  {
     publishWeatherRead();
     vTaskDelay(600000); // 10 * 1min
   }
