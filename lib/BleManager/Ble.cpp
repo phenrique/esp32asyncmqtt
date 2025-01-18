@@ -10,10 +10,7 @@ void Ble::start() {
   uint8_t controller = 0;
 
   // Create the BLE Device
-  preferences.begin("info", false);
-  String deviceName = preferences.getString("deviceName", DEFAUT_DEVICE_NAME);
-  preferences.end();
-  BLEDevice::init(deviceName);
+  BLEDevice::init(DEFAUT_DEVICE_NAME);
 
   // Create the BLE Server
   BLEServer *pServer = BLEDevice::createServer();
