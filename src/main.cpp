@@ -1,15 +1,15 @@
 #include <Arduino.h>
 
-#include "BleManager/Ble.h"
-#include "WifiManager/WifiManager.h"
-#include "MqttManager/MqttManager.h"
+#include "Ble.h"
+#include "WifiManager.h"
+#include "MqttManager.h"
+#include "NoiseSensor.h"
+#include "DHT.h"
 extern "C"
 {
 #include "freertos/FreeRTOS.h"
 #include "freertos/timers.h"
 }
-#include "DHT.h"
-#include "NoiseSensor/NoiseSensor.h"
 
 #define MQTT_MESSAGE_SENSORS_LEN 128
 #define MQTT_MESSAGE_NOISE_LEN 64

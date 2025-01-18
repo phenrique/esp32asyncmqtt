@@ -13,7 +13,7 @@ void Ble::start() {
   preferences.begin("info", false);
   String deviceName = preferences.getString("deviceName", DEFAUT_DEVICE_NAME);
   preferences.end();
-  BLEDevice::init(DEFAUT_DEVICE_NAME);
+  BLEDevice::init(deviceName);
 
   // Create the BLE Server
   BLEServer *pServer = BLEDevice::createServer();
