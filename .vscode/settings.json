@@ -1,0 +1,25 @@
+{
+    "C_Cpp.default.compilerPath": "/home/paulo/.platformio/packages/toolchain-xtensa-esp32/bin/xtensa-esp32-elf-gcc",
+    "files.associations": {
+        "*.inc": "cpp",
+        "*.tcc": "cpp",
+        "iosfwd": "cpp",
+        "istream": "cpp",
+        "limits": "cpp",
+        "sstream": "cpp",
+        "streambuf": "cpp",
+        "array": "cpp",
+        "deque": "cpp",
+        "list": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "unordered_set": "cpp",
+        "vector": "cpp",
+        "string_view": "cpp",
+        "initializer_list": "cpp",
+        "span": "cpp",
+        "random": "cpp",
+        "memory": "cpp",
+        "cmath": "cpp"
+    }
+}

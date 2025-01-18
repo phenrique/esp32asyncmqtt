@@ -1,7 +1,6 @@
 #include <Preferences.h>
 #include <BLEUtils.h>
 
-
 class MyServerCallbacks: public BLEServerCallbacks {
 
     bool deviceConnected;
@@ -30,7 +29,7 @@ class CredentialsCallbacks : public BLECharacteristicCallbacks {
 
   void onWrite(BLECharacteristic *pCharacteristic) {
 
-    std::string value = pCharacteristic->getValue();
+    String value = pCharacteristic->getValue();
 
     if(controller == 1){
       preferences.begin("credentials", false);
@@ -100,7 +99,7 @@ class DevInfoCallbacks : public BLECharacteristicCallbacks {
   
   void onWrite(BLECharacteristic *pCharacteristic) {
 
-    std::string value = pCharacteristic->getValue();
+    String value = pCharacteristic->getValue();
 
     long deviceId = std::strtoul(value.c_str(), NULL, 0);
 
@@ -130,6 +129,18 @@ class DevInfoCallbacks : public BLECharacteristicCallbacks {
       pCharacteristic->setValue("");
       controller = 0;
     }
+    if(controller == 3){
+      preferences.begin("info", false);
+      preferences.putString("deviceName", value.c_str());
+
+      Serial.print("deviceName received: ");
+      Serial.println(value.c_str());
+      Serial.println("deviceName Saved using Preferences");
+
+      preferences.end();
+      pCharacteristic->setValue("");
+      controller = 0;
+    }
 
     controller = std::strtoul(value.c_str(), NULL, 0);
     Serial.print("valor do controlador");
@@ -154,7 +165,6 @@ class DevInfoCallbacks : public BLECharacteristicCallbacks {
 
       Serial.print("Leu usando preferencias: ");
       Serial.println(info);
-
   }
 
   public:
