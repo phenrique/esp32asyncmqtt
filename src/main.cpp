@@ -8,15 +8,17 @@ extern "C"
 #include "freertos/FreeRTOS.h"
 #include "freertos/timers.h"
 }
-#include <ArduinoJson.h>
 #include "DHT.h"
 #include "NoiseSensor/NoiseSensor.h"
 
-#define MQTT_MESSAGE_LEN 128
+#define MQTT_MESSAGE_SENSORS_LEN 128
+#define MQTT_MESSAGE_NOISE_LEN 64
+#define SENSORS_JSON "{\"deviceId\":%ld,\"humidity\":%.0f,\"temperature\":%.0f,\"timestamp\":%ld}"
+#define NOISE_SENSOR "{\"deviceId\":%d,\"timestamp\":%lu}"
 
 #define MQTT_HOST "200.239.66.45"
 #define MQTT_PORT 1883
-#define MQTT_CLIENT_ID "testEsp32Device-01" // cada dispositivo deve ter um id diferente
+#define MQTT_CLIENT_ID "testEsp32Device-02" // cada dispositivo deve ter um id diferente
 #define MQTT_TOPIC_ROOT "ESP32PhcnTeste"
 #define SENSORS_TOPIC MQTT_TOPIC_ROOT "/sensors"
 #define NOISE_TOPIC MQTT_TOPIC_ROOT "/noises"
@@ -47,9 +49,6 @@ int noiseThreshold;
 boolean active = false;
 
 DHT dht(DHTPIN, DHTTYPE);
-
-StaticJsonDocument<MQTT_MESSAGE_LEN> doc;
-StaticJsonDocument<64> docNoise;
 
 TimerHandle_t sensorsTimer;
 TimerHandle_t noiseTimer;
@@ -93,16 +92,12 @@ void noiseMonitoring()
   {
 
     setDeviceId();
-    // char output[35];
-    // sprintf(output, "{\"deviceId\":%d,\"timestamp\":%u}", deviceId, time(nullptr));
-    docNoise["deviceId"] = deviceId;
-    docNoise["timestamp"] = time(nullptr);
+    time_t now = time(nullptr);
+    char output[MQTT_MESSAGE_NOISE_LEN];
+    snprintf(output, MQTT_MESSAGE_NOISE_LEN, NOISE_SENSOR, deviceId, now);
 
-    char output[64];
-    serializeJson(docNoise, output);
     Serial.print("noise up! ");
     Serial.println(output);
-    mqttManager.publish(NOISE_TOPIC, 0, false, output);
     xTimerStart(noiseTimer, 0);
   }
 
@@ -113,6 +108,7 @@ void publishWeatherRead()
 {
 
   float h = dht.readHumidity();
+  delay(1);
   float t = dht.readTemperature();
 
   if (isnan(h) || isnan(t))
@@ -121,13 +117,9 @@ void publishWeatherRead()
   }
   else
   {
-    doc["deviceId"] = deviceId;
-    doc["humidity"] = round(h);
-    doc["temperature"] = round(t);
-    doc["timestamp"] = time(nullptr);
-
-    char output[MQTT_MESSAGE_LEN];
-    serializeJson(doc, output);
+    time_t now = time(nullptr);
+    char output[MQTT_MESSAGE_SENSORS_LEN];
+    snprintf(output, MQTT_MESSAGE_SENSORS_LEN, SENSORS_JSON, deviceId, round(h), round(t), now);
     Serial.println(output);
     mqttManager.publish(SENSORS_TOPIC, 0, false, output);
   }
@@ -207,7 +199,7 @@ void setup()
   wifiManager.begin(WiFiEvent);
 
   sensorsTimer = xTimerCreate("sensorsTimer", pdMS_TO_TICKS(10000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(activeReadSensors));
-  noiseTimer = xTimerCreate("noiseTimer", pdMS_TO_TICKS(1000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(noiseMonitoring));
+  noiseTimer = xTimerCreate("noiseTimer", pdMS_TO_TICKS(3000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(noiseMonitoring));
 
   setDeviceId();
 
@@ -221,6 +213,6 @@ void loop()
   if (active)
   {
     publishWeatherRead();
-    vTaskDelay(600000); // 10 * 1min
+    vTaskDelay(1200000); // 20min
   }
 }
