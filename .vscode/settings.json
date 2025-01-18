@@ -19,6 +19,7 @@
         "initializer_list": "cpp",
         "span": "cpp",
         "random": "cpp",
-        "memory": "cpp"
+        "memory": "cpp",
+        "cmath": "cpp"
     }
 }
