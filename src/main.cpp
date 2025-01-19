@@ -11,6 +11,8 @@ extern "C"
 #include "freertos/timers.h"
 }
 
+#define DEVICE_NAME "LAAI-ESP32-02"
+
 #define MQTT_MESSAGE_SENSORS_LEN 128
 #define MQTT_MESSAGE_NOISE_LEN 64
 #define SENSORS_JSON "{\"deviceId\":%ld,\"humidity\":%.0f,\"temperature\":%.0f,\"timestamp\":%ld}"
@@ -18,7 +20,7 @@ extern "C"
 
 #define MQTT_HOST "200.239.66.45"
 #define MQTT_PORT 1883
-#define MQTT_CLIENT_ID "testEsp32Device-02" // cada dispositivo deve ter um id diferente
+#define MQTT_CLIENT_ID DEVICE_NAME // cada dispositivo deve ter um id diferente
 #define MQTT_TOPIC_ROOT "ESP32PhcnTeste"
 #define SENSORS_TOPIC MQTT_TOPIC_ROOT "/sensors"
 #define NOISE_TOPIC MQTT_TOPIC_ROOT "/noises"
@@ -32,7 +34,7 @@ uint32_t value = 0;
 WifiManager wifiManager;
 MqttManager mqttManager(MQTT_CLIENT_ID, MQTT_HOST, MQTT_PORT);
 
-Ble ble = Ble(preferences);
+Ble ble = Ble(DEVICE_NAME, preferences);
 
 NoiseSensor noiseSensor;
 
@@ -98,6 +100,7 @@ void noiseMonitoring()
 
     Serial.print("noise up! ");
     Serial.println(output);
+    mqttManager.publish(NOISE_TOPIC, 0, false, output);
     xTimerStart(noiseTimer, 0);
   }
 
@@ -190,6 +193,7 @@ void setup()
   tzset();
 
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  delay(3000);
 
   dht.begin();
   noiseSensor.begin();
@@ -198,8 +202,8 @@ void setup()
   mqttManager.begin(onMqttConnect, onMqttDisconnect);
   wifiManager.begin(WiFiEvent);
 
-  sensorsTimer = xTimerCreate("sensorsTimer", pdMS_TO_TICKS(10000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(activeReadSensors));
-  noiseTimer = xTimerCreate("noiseTimer", pdMS_TO_TICKS(3000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(noiseMonitoring));
+  sensorsTimer = xTimerCreate("sensorsTimer", pdMS_TO_TICKS(3000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(activeReadSensors));
+  noiseTimer = xTimerCreate("noiseTimer", pdMS_TO_TICKS(1000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(noiseMonitoring));
 
   setDeviceId();
 

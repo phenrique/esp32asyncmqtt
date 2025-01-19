@@ -1,16 +1,19 @@
 #include "Ble.h"
 
-Ble::Ble(Preferences &preferences) : preferences(preferences) {
+Ble::Ble(const char *deviceName, Preferences &preferences) : preferences(preferences), deviceName(deviceName)
+{
   this->preferences = preferences;
+  this->deviceName = deviceName;
 }
 
-void Ble::start() {
+void Ble::start()
+{
 
   bool deviceConnected;
   uint8_t controller = 0;
 
   // Create the BLE Device
-  BLEDevice::init(DEFAUT_DEVICE_NAME);
+  BLEDevice::init(deviceName);
 
   // Create the BLE Server
   BLEServer *pServer = BLEDevice::createServer();
