@@ -11,7 +11,7 @@ extern "C"
 #include "freertos/timers.h"
 }
 
-#define DEVICE_NAME "LAAI-ESP32-02"
+#define DEVICE_NAME "LAAI-ESP32-01"
 
 #define MQTT_MESSAGE_SENSORS_LEN 128
 #define MQTT_MESSAGE_NOISE_LEN 64
@@ -54,6 +54,14 @@ DHT dht(DHTPIN, DHTTYPE);
 
 TimerHandle_t sensorsTimer;
 TimerHandle_t noiseTimer;
+
+
+void configuraNTP(){
+  setenv("TZ", TZ_INFO, 1);
+  tzset();
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  time(nullptr);
+}
 
 void setDeviceId()
 {
@@ -137,6 +145,8 @@ void WiFiEvent(WiFiEvent_t event)
     Serial.println("WiFi connected");
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
+    configuraNTP();
+    delay(10);
     mqttManager.connect();
 
     break;
@@ -188,28 +198,24 @@ void setup()
   Serial.begin(115200);
   Serial.println();
   Serial.println();
-
-  setenv("TZ", TZ_INFO, 1);
-  tzset();
-
-  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
-  delay(3000);
-
+  
   dht.begin();
   noiseSensor.begin();
   noiseSensor.beginSmoothing();
 
+  sensorsTimer = xTimerCreate("sensorsTimer", pdMS_TO_TICKS(5000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(activeReadSensors));
+  noiseTimer = xTimerCreate("noiseTimer", pdMS_TO_TICKS(1000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(noiseMonitoring));
+
   mqttManager.begin(onMqttConnect, onMqttDisconnect);
   wifiManager.begin(WiFiEvent);
-
-  sensorsTimer = xTimerCreate("sensorsTimer", pdMS_TO_TICKS(3000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(activeReadSensors));
-  noiseTimer = xTimerCreate("noiseTimer", pdMS_TO_TICKS(1000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(noiseMonitoring));
 
   setDeviceId();
 
   ble.start();
+    
+  Serial.println("Iniciando Monitoramento em 3 segundos");
+  delay(3000);
 
-  delay(1000);
 }
 
 void loop()
@@ -217,6 +223,6 @@ void loop()
   if (active)
   {
     publishWeatherRead();
-    vTaskDelay(1200000); // 20min
+    vTaskDelay(600000); // 10min
   }
 }
