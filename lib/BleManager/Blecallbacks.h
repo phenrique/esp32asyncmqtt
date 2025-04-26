@@ -30,6 +30,9 @@ class CredentialsCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic *pCharacteristic) override {
     String value = pCharacteristic->getValue();
 
+    Serial.print("Recebido BLE: ");
+    Serial.println(value);
+
     int separatorIndex = value.indexOf(':');
     if (separatorIndex == -1) {
       Serial.println("Invalid format");
@@ -48,7 +51,6 @@ class CredentialsCallbacks : public BLECharacteristicCallbacks {
         Serial.print("SSID salva: ");
         Serial.println(data);
         break;
-
       case 2:
         preferences.putString("password", data.c_str());
         Serial.print("Password salva: ");
@@ -58,6 +60,12 @@ class CredentialsCallbacks : public BLECharacteristicCallbacks {
         preferences.putString("mqttHost", data.c_str());
         Serial.print("mqttHost salva: ");
         Serial.println(data);
+        break;
+      case 4:
+        if(data == "RST") {
+          Serial.println("Resetando ESP");
+          ESP.restart();
+        } 
         break;
       default:
         Serial.println("Comando inválido");
