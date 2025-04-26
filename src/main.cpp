@@ -18,12 +18,13 @@ extern "C"
 #define SENSORS_JSON "{\"deviceId\":%ld,\"humidity\":%.0f,\"temperature\":%.0f,\"timestamp\":%ld}"
 #define NOISE_SENSOR "{\"deviceId\":%d,\"timestamp\":%lu}"
 
-#define MQTT_HOST "200.239.66.45"
+#define MQTT_HOST_DEFAULT "test.mosquitto.org"
 #define MQTT_PORT 1883
 #define MQTT_CLIENT_ID DEVICE_NAME // cada dispositivo deve ter um id diferente
 #define MQTT_TOPIC_ROOT "ESP32PhcnTeste"
 #define SENSORS_TOPIC MQTT_TOPIC_ROOT "/sensors"
 #define NOISE_TOPIC MQTT_TOPIC_ROOT "/noises"
+const char* getMqttHost(void);
 
 bool deviceConnected = false;
 
@@ -32,7 +33,8 @@ Preferences preferences;
 uint32_t value = 0;
 
 WifiManager wifiManager;
-MqttManager mqttManager(MQTT_CLIENT_ID, MQTT_HOST, MQTT_PORT);
+
+MqttManager mqttManager(MQTT_CLIENT_ID, getMqttHost(), MQTT_PORT);
 
 Ble ble = Ble(DEVICE_NAME, preferences);
 
@@ -55,6 +57,13 @@ DHT dht(DHTPIN, DHTTYPE);
 TimerHandle_t sensorsTimer;
 TimerHandle_t noiseTimer;
 
+const char* getMqttHost(void)
+{
+  preferences.begin("credentials", false);
+  String mqttHost = preferences.getString("mqttHost", "");
+  preferences.end();
+  return mqttHost.isEmpty() ? MQTT_HOST_DEFAULT : mqttHost.c_str();
+}
 
 void configuraNTP(){
   setenv("TZ", TZ_INFO, 1);

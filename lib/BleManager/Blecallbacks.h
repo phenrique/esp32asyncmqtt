@@ -27,40 +27,41 @@ class CredentialsCallbacks : public BLECharacteristicCallbacks {
   Preferences preferences;
   uint8_t controller;
 
-  void onWrite(BLECharacteristic *pCharacteristic) {
-
+  void onWrite(BLECharacteristic *pCharacteristic) override {
     String value = pCharacteristic->getValue();
 
-    if(controller == 1){
-      preferences.begin("credentials", false);
-      preferences.putString("ssid", value.c_str());
-
-      Serial.print("SSID received: ");
-      Serial.println(value.c_str());
-      Serial.println("SSID Saved using Preferences");
-
-      preferences.end();
-      pCharacteristic->setValue("");
-      controller = 0;
+    // Parse the command and value (format: "cmd:value")
+    int separatorIndex = value.indexOf(':');
+    if (separatorIndex == -1) {
+      Serial.println("Invalid format");
+      return;
     }
 
-    if(controller == 2){
-      preferences.begin("credentials", false);
-      preferences.putString("password", value.c_str());
+    int cmd = value.substring(0, separatorIndex).toInt();
+    String data = value.substring(separatorIndex + 1);
 
-      Serial.print("password received: ");
-      Serial.println(value.c_str());
-      Serial.println("password Saved using Preferences");
+    preferences.begin("credentials", false);
 
-      preferences.end();
-      pCharacteristic->setValue("");
-      controller = 0;
+    switch (cmd) {
+      case 1:
+        preferences.putString("ssid", data.c_str());
+        Serial.print("SSID salva: ");
+        Serial.println(data);
+        break;
+
+      case 2:
+        preferences.putString("password", data.c_str());
+        Serial.print("Password salva: ");
+        Serial.println(data);
+        break;
+
+      default:
+        Serial.println("Comando inválido");
+        break;
     }
 
-    controller = std::strtoul(value.c_str(), NULL, 0);
-    Serial.print("valor do controlador");
-    Serial.println(controller);
-
+    preferences.end();
+    pCharacteristic->setValue(""); // Clear the characteristic value
   }
 
   void onRead(BLECharacteristic *pCharacteristic) {
