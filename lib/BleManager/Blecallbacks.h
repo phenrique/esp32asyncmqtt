@@ -30,7 +30,6 @@ class CredentialsCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic *pCharacteristic) override {
     String value = pCharacteristic->getValue();
 
-    // Parse the command and value (format: "cmd:value")
     int separatorIndex = value.indexOf(':');
     if (separatorIndex == -1) {
       Serial.println("Invalid format");
@@ -39,6 +38,7 @@ class CredentialsCallbacks : public BLECharacteristicCallbacks {
 
     int cmd = value.substring(0, separatorIndex).toInt();
     String data = value.substring(separatorIndex + 1);
+    data.trim();
 
     preferences.begin("credentials", false);
 
@@ -54,7 +54,11 @@ class CredentialsCallbacks : public BLECharacteristicCallbacks {
         Serial.print("Password salva: ");
         Serial.println(data);
         break;
-
+      case 3:
+        preferences.putString("mqttHost", data.c_str());
+        Serial.print("mqttHost salva: ");
+        Serial.println(data);
+        break;
       default:
         Serial.println("Comando inválido");
         break;
@@ -74,6 +78,8 @@ class CredentialsCallbacks : public BLECharacteristicCallbacks {
       credentials += preferences.getString("ssid", "vazio");
       credentials += "\n";
       credentials += preferences.getString("password", "vazio");
+      credentials += "\n";
+      credentials += preferences.getString("mqttHost", "vazio");
       preferences.end();
 
       pCharacteristic->setValue(credentials.c_str());

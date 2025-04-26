@@ -24,19 +24,10 @@ extern "C"
 #define MQTT_TOPIC_ROOT "ESP32PhcnTeste"
 #define SENSORS_TOPIC MQTT_TOPIC_ROOT "/sensors"
 #define NOISE_TOPIC MQTT_TOPIC_ROOT "/noises"
-const char* getMqttHost(void);
-
-bool deviceConnected = false;
 
 Preferences preferences;
 
-uint32_t value = 0;
-
-WifiManager wifiManager;
-
-MqttManager mqttManager(MQTT_CLIENT_ID, getMqttHost(), MQTT_PORT);
-
-Ble ble = Ble(DEVICE_NAME, preferences);
+bool deviceConnected = false;
 
 NoiseSensor noiseSensor;
 
@@ -46,8 +37,8 @@ const char *TZ_INFO = "BRT3";
 #define DHTPIN 4
 #define DHTTYPE DHT22 // DHT 22  (AM2302), AM2321
 
-String ssid;
-String password;
+char mqttHostBuffer[32];
+
 long deviceId;
 int noiseThreshold;
 boolean active = false;
@@ -57,12 +48,27 @@ DHT dht(DHTPIN, DHTTYPE);
 TimerHandle_t sensorsTimer;
 TimerHandle_t noiseTimer;
 
-const char* getMqttHost(void)
+WifiManager wifiManager;
+
+MqttManager mqttManager;
+
+Ble ble = Ble(DEVICE_NAME, preferences);
+
+void setMqttHost(void)
 {
   preferences.begin("credentials", false);
-  String mqttHost = preferences.getString("mqttHost", "");
+  String host = preferences.getString("mqttHost", "");
   preferences.end();
-  return mqttHost.isEmpty() ? MQTT_HOST_DEFAULT : mqttHost.c_str();
+
+  strlcpy(mqttHostBuffer, host.c_str(), sizeof(mqttHostBuffer));
+
+  Serial.print("mqttHost: ");
+  Serial.println(mqttHostBuffer);
+}
+
+const char * getMqttHost(void)
+{
+  return mqttHostBuffer[0] == '\0' ? MQTT_HOST_DEFAULT : mqttHostBuffer;
 }
 
 void configuraNTP(){
@@ -172,6 +178,8 @@ void WiFiEvent(WiFiEvent_t event)
 void onMqttConnect(bool sessionPresent)
 {
   Serial.println("Connected to MQTT.");
+  Serial.print("MQTT HOST: ");
+  Serial.println(mqttManager.getHost());
   Serial.print("Session present: ");
   Serial.println(sessionPresent);
   uint16_t packetIdSub = mqttManager.subscribe("test/lol", 2);
@@ -207,7 +215,8 @@ void setup()
   Serial.begin(115200);
   Serial.println();
   Serial.println();
-  
+  delay(1000);
+
   dht.begin();
   noiseSensor.begin();
   noiseSensor.beginSmoothing();
@@ -215,7 +224,8 @@ void setup()
   sensorsTimer = xTimerCreate("sensorsTimer", pdMS_TO_TICKS(5000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(activeReadSensors));
   noiseTimer = xTimerCreate("noiseTimer", pdMS_TO_TICKS(1000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(noiseMonitoring));
 
-  mqttManager.begin(onMqttConnect, onMqttDisconnect);
+  setMqttHost();
+  mqttManager.begin(MQTT_CLIENT_ID, getMqttHost(), MQTT_PORT, onMqttConnect, onMqttDisconnect);
   wifiManager.begin(WiFiEvent);
 
   setDeviceId();
