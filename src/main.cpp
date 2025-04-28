@@ -61,9 +61,6 @@ void setMqttHost(void)
   preferences.end();
 
   strlcpy(mqttHostBuffer, host.c_str(), sizeof(mqttHostBuffer));
-
-  Serial.print("mqttHost: ");
-  Serial.println(mqttHostBuffer);
 }
 
 const char * getMqttHost(void)
@@ -157,8 +154,7 @@ void WiFiEvent(WiFiEvent_t event)
   switch (event)
   {
   case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
+    Serial.println("WiFi connected. IP: ");
     Serial.println(WiFi.localIP());
     configuraNTP();
     delay(10);
@@ -177,22 +173,16 @@ void WiFiEvent(WiFiEvent_t event)
 
 void onMqttConnect(bool sessionPresent)
 {
-  Serial.println("Connected to MQTT.");
-  Serial.print("MQTT HOST: ");
-  Serial.println(mqttManager.getHost());
-  Serial.print("Session present: ");
-  Serial.println(sessionPresent);
+  Serial.printf("Connected to MQTT. HOST: %s\n", mqttManager.getHost());
+  Serial.printf("Session present: %d\n", sessionPresent);
   uint16_t packetIdSub = mqttManager.subscribe("test/lol", 2);
-  Serial.print("Subscribing at QoS 2, packetId: ");
-  Serial.println(packetIdSub);
+  Serial.printf("Subscribing at QoS 2, packetId: %d\n", packetIdSub);
   mqttManager.publish("test/lol", 0, true, "test 1");
   Serial.println("Publishing at QoS 0");
   uint16_t packetIdPub1 = mqttManager.publish("test/lol", 1, true, "test 2");
-  Serial.print("Publishing at QoS 1, packetId: ");
-  Serial.println(packetIdPub1);
+  Serial.printf("Publishing at QoS 1, packetId: %d\n", packetIdPub1);
   uint16_t packetIdPub2 = mqttManager.publish("test/lol", 2, true, "test 3");
-  Serial.print("Publishing at QoS 2, packetId: ");
-  Serial.println(packetIdPub2);
+  Serial.printf("Publishing at QoS 2, packetId: %d\n", packetIdPub2);
 
   xTimerStart(sensorsTimer, 0);
 }
@@ -200,7 +190,6 @@ void onMqttConnect(bool sessionPresent)
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
 {
   Serial.println("Disconnected from MQTT.");
-  Serial.println("Motivo:");
   deactiveReadSensors();
 
   if (wifiManager.isConnected())
