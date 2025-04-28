@@ -150,11 +150,11 @@ void publishWeatherRead()
 
 void WiFiEvent(WiFiEvent_t event)
 {
-  Serial.printf("[WiFi-event] event: %d\n", event);
+  Serial.printf("[WiFi-event] event: %d\r\n", event);
   switch (event)
   {
   case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-    Serial.println("WiFi connected. IP: ");
+    Serial.print("WiFi connected. IP: ");
     Serial.println(WiFi.localIP());
     configuraNTP();
     delay(10);
@@ -164,8 +164,8 @@ void WiFiEvent(WiFiEvent_t event)
   case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
     Serial.println("WiFi lost connection");
     wifiManager.disconnect();          // Precisamos limpar a conexão antes de tentar reconectar
-    mqttManager.disableReconnection(); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
-    active = false;                    // desativa as leituras caso o Wi-Fi esteja desconectado
+    mqttManager.disableReconnection(); // Garante que o MQTT não tente reconectar enquanto o Wi-Fi não estiver conectado
+    active = false;                    // Desativa as leituras caso o Wi-Fi esteja desconectado
     wifiManager.reconnect();           // Espera o timer definido e depois tenta reconectar
     break;
   }
@@ -173,16 +173,16 @@ void WiFiEvent(WiFiEvent_t event)
 
 void onMqttConnect(bool sessionPresent)
 {
-  Serial.printf("Connected to MQTT. HOST: %s\n", mqttManager.getHost());
-  Serial.printf("Session present: %d\n", sessionPresent);
+  Serial.printf("Connected to MQTT. HOST: %s\r\n", mqttManager.getHost());
+  Serial.printf("Session present: %d\r\n", sessionPresent);
   uint16_t packetIdSub = mqttManager.subscribe("test/lol", 2);
-  Serial.printf("Subscribing at QoS 2, packetId: %d\n", packetIdSub);
+  Serial.printf("Subscribing at QoS 2, packetId: %d\r\n", packetIdSub);
   mqttManager.publish("test/lol", 0, true, "test 1");
   Serial.println("Publishing at QoS 0");
   uint16_t packetIdPub1 = mqttManager.publish("test/lol", 1, true, "test 2");
-  Serial.printf("Publishing at QoS 1, packetId: %d\n", packetIdPub1);
+  Serial.printf("Publishing at QoS 1, packetId: %d\r\n", packetIdPub1);
   uint16_t packetIdPub2 = mqttManager.publish("test/lol", 2, true, "test 3");
-  Serial.printf("Publishing at QoS 2, packetId: %d\n", packetIdPub2);
+  Serial.printf("Publishing at QoS 2, packetId: %d\r\n", packetIdPub2);
 
   xTimerStart(sensorsTimer, 0);
 }
