@@ -20,6 +20,17 @@
         "span": "cpp",
         "random": "cpp",
         "memory": "cpp",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "atomic": "cpp",
+        "bit": "cpp",
+        "algorithm": "cpp",
+        "functional": "cpp",
+        "memory_resource": "cpp",
+        "optional": "cpp",
+        "system_error": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "numeric": "cpp",
+        "utility": "cpp"
     }
 }

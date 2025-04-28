@@ -18,23 +18,16 @@ extern "C"
 #define SENSORS_JSON "{\"deviceId\":%ld,\"humidity\":%.0f,\"temperature\":%.0f,\"timestamp\":%ld}"
 #define NOISE_SENSOR "{\"deviceId\":%d,\"timestamp\":%lu}"
 
-#define MQTT_HOST "200.239.66.45"
+#define MQTT_HOST_DEFAULT "test.mosquitto.org"
 #define MQTT_PORT 1883
 #define MQTT_CLIENT_ID DEVICE_NAME // cada dispositivo deve ter um id diferente
-#define MQTT_TOPIC_ROOT "ESP32PhcnTeste"
+#define MQTT_TOPIC_ROOT "laai/conforto/npi" DEVICE_NAME
 #define SENSORS_TOPIC MQTT_TOPIC_ROOT "/sensors"
 #define NOISE_TOPIC MQTT_TOPIC_ROOT "/noises"
 
-bool deviceConnected = false;
-
 Preferences preferences;
 
-uint32_t value = 0;
-
-WifiManager wifiManager;
-MqttManager mqttManager(MQTT_CLIENT_ID, MQTT_HOST, MQTT_PORT);
-
-Ble ble = Ble(DEVICE_NAME, preferences);
+bool deviceConnected = false;
 
 NoiseSensor noiseSensor;
 
@@ -44,8 +37,8 @@ const char *TZ_INFO = "BRT3";
 #define DHTPIN 4
 #define DHTTYPE DHT22 // DHT 22  (AM2302), AM2321
 
-String ssid;
-String password;
+char mqttHostBuffer[32];
+
 long deviceId;
 int noiseThreshold;
 boolean active = false;
@@ -55,6 +48,25 @@ DHT dht(DHTPIN, DHTTYPE);
 TimerHandle_t sensorsTimer;
 TimerHandle_t noiseTimer;
 
+WifiManager wifiManager;
+
+MqttManager mqttManager;
+
+Ble ble = Ble(DEVICE_NAME, preferences);
+
+void setMqttHost(void)
+{
+  preferences.begin("credentials", false);
+  String host = preferences.getString("mqttHost", "");
+  preferences.end();
+
+  strlcpy(mqttHostBuffer, host.c_str(), sizeof(mqttHostBuffer));
+}
+
+const char * getMqttHost(void)
+{
+  return mqttHostBuffer[0] == '\0' ? MQTT_HOST_DEFAULT : mqttHostBuffer;
+}
 
 void configuraNTP(){
   setenv("TZ", TZ_INFO, 1);
@@ -138,12 +150,11 @@ void publishWeatherRead()
 
 void WiFiEvent(WiFiEvent_t event)
 {
-  Serial.printf("[WiFi-event] event: %d\n", event);
+  Serial.printf("[WiFi-event] event: %d\r\n", event);
   switch (event)
   {
   case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
+    Serial.print("WiFi connected. IP: ");
     Serial.println(WiFi.localIP());
     configuraNTP();
     delay(10);
@@ -153,8 +164,8 @@ void WiFiEvent(WiFiEvent_t event)
   case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
     Serial.println("WiFi lost connection");
     wifiManager.disconnect();          // Precisamos limpar a conexão antes de tentar reconectar
-    mqttManager.disableReconnection(); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
-    active = false;                    // desativa as leituras caso o Wi-Fi esteja desconectado
+    mqttManager.disableReconnection(); // Garante que o MQTT não tente reconectar enquanto o Wi-Fi não estiver conectado
+    active = false;                    // Desativa as leituras caso o Wi-Fi esteja desconectado
     wifiManager.reconnect();           // Espera o timer definido e depois tenta reconectar
     break;
   }
@@ -162,20 +173,16 @@ void WiFiEvent(WiFiEvent_t event)
 
 void onMqttConnect(bool sessionPresent)
 {
-  Serial.println("Connected to MQTT.");
-  Serial.print("Session present: ");
-  Serial.println(sessionPresent);
+  Serial.printf("Connected to MQTT. HOST: %s\r\n", mqttManager.getHost());
+  Serial.printf("Session present: %d\r\n", sessionPresent);
   uint16_t packetIdSub = mqttManager.subscribe("test/lol", 2);
-  Serial.print("Subscribing at QoS 2, packetId: ");
-  Serial.println(packetIdSub);
+  Serial.printf("Subscribing at QoS 2, packetId: %d\r\n", packetIdSub);
   mqttManager.publish("test/lol", 0, true, "test 1");
   Serial.println("Publishing at QoS 0");
   uint16_t packetIdPub1 = mqttManager.publish("test/lol", 1, true, "test 2");
-  Serial.print("Publishing at QoS 1, packetId: ");
-  Serial.println(packetIdPub1);
+  Serial.printf("Publishing at QoS 1, packetId: %d\r\n", packetIdPub1);
   uint16_t packetIdPub2 = mqttManager.publish("test/lol", 2, true, "test 3");
-  Serial.print("Publishing at QoS 2, packetId: ");
-  Serial.println(packetIdPub2);
+  Serial.printf("Publishing at QoS 2, packetId: %d\r\n", packetIdPub2);
 
   xTimerStart(sensorsTimer, 0);
 }
@@ -183,7 +190,6 @@ void onMqttConnect(bool sessionPresent)
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
 {
   Serial.println("Disconnected from MQTT.");
-  Serial.println("Motivo:");
   deactiveReadSensors();
 
   if (wifiManager.isConnected())
@@ -198,7 +204,8 @@ void setup()
   Serial.begin(115200);
   Serial.println();
   Serial.println();
-  
+  delay(1000);
+
   dht.begin();
   noiseSensor.begin();
   noiseSensor.beginSmoothing();
@@ -206,7 +213,8 @@ void setup()
   sensorsTimer = xTimerCreate("sensorsTimer", pdMS_TO_TICKS(5000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(activeReadSensors));
   noiseTimer = xTimerCreate("noiseTimer", pdMS_TO_TICKS(1000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(noiseMonitoring));
 
-  mqttManager.begin(onMqttConnect, onMqttDisconnect);
+  setMqttHost();
+  mqttManager.begin(MQTT_CLIENT_ID, getMqttHost(), MQTT_PORT, onMqttConnect, onMqttDisconnect);
   wifiManager.begin(WiFiEvent);
 
   setDeviceId();
