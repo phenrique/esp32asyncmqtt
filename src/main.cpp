@@ -21,9 +21,9 @@ extern "C"
 #define MQTT_HOST_DEFAULT "test.mosquitto.org"
 #define MQTT_PORT 1883
 #define MQTT_CLIENT_ID DEVICE_NAME // cada dispositivo deve ter um id diferente
-#define MQTT_TOPIC_ROOT "laai/conforto/npi" DEVICE_NAME
-#define SENSORS_TOPIC MQTT_TOPIC_ROOT "/sensors"
-#define NOISE_TOPIC MQTT_TOPIC_ROOT "/noises"
+#define MQTT_TOPIC_ROOT "laai/conforto/npi"
+#define SENSORS_TOPIC MQTT_TOPIC_ROOT "/clima"
+#define NOISE_TOPIC MQTT_TOPIC_ROOT "/ruido"
 
 Preferences preferences;
 
