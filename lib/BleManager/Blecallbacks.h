@@ -3,7 +3,7 @@
 
 class MyServerCallbacks: public BLEServerCallbacks {
 
-    bool deviceConnected;
+  bool &deviceConnected; // Referência para a variável deviceConnected da classe Ble
 
     void onConnect(BLEServer* pServer) {
       deviceConnected = true;
@@ -14,11 +14,8 @@ class MyServerCallbacks: public BLEServerCallbacks {
       pServer->startAdvertising(); // Reiniciar o anúncio BLE após a desconexão
     }
 
-    public: 
-
-      MyServerCallbacks(bool& deviceConnected){
-        deviceConnected = deviceConnected;
-      }
+    public:
+    MyServerCallbacks(bool &deviceConnected) : deviceConnected(deviceConnected) {}
 };
 
 
