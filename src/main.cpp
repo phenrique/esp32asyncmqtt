@@ -164,7 +164,6 @@ void WiFiEvent(WiFiEvent_t event)
   case ARDUINO_EVENT_WIFI_STA_GOT_IP:
     Serial.print("WiFi connected. IP: ");
     Serial.println(WiFi.localIP());
-    ble.logar("WiFi UP");
     configuraNTP();
     delay(10);
     mqttManager.connect();
@@ -172,7 +171,6 @@ void WiFiEvent(WiFiEvent_t event)
     break;
   case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
     Serial.println("WiFi lost connection");
-    ble.logar("WiFi DOWN");
     wifiManager.disconnect();          // Precisamos limpar a conexão antes de tentar reconectar
     mqttManager.disableReconnection(); // Garante que o MQTT não tente reconectar enquanto o Wi-Fi não estiver conectado
     active = false;                    // Desativa as leituras caso o Wi-Fi esteja desconectado
@@ -184,7 +182,6 @@ void WiFiEvent(WiFiEvent_t event)
 void onMqttConnect(bool sessionPresent)
 {
   Serial.printf("Connected to MQTT. HOST: %s\r\n", mqttManager.getHost());
-  ble.logar("MQTT UP");
 
   Serial.printf("Session present: %d\r\n", sessionPresent);
   uint16_t packetIdSub = mqttManager.subscribe("test/lol", 2);
@@ -203,12 +200,10 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
 {
   Serial.println("Disconnected from MQTT.");
   deactiveReadSensors();
-  ble.logar("MQTT DOWN");
 
   if (wifiManager.isConnected())
   {
     mqttManager.reconnect();
-    ble.logar("MQTT REST");
   }
 }
 
@@ -244,7 +239,6 @@ void loop()
   if (active)
   {
     publishWeatherRead();
-    ble.logar("WEATHER UP");
     vTaskDelay(600000); // 10min
   }
 }
