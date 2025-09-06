@@ -15,8 +15,11 @@ extern "C"
 
 #define MQTT_MESSAGE_SENSORS_LEN 128
 #define MQTT_MESSAGE_NOISE_LEN 64
+#define MQTT_MESSAGE_STATUS_LEN 64
 #define SENSORS_JSON "{\"deviceId\":%ld,\"humidity\":%.0f,\"temperature\":%.0f,\"timestamp\":%ld}"
 #define NOISE_SENSOR "{\"deviceId\":%d,\"timestamp\":%lu}"
+#define STATUS_JSON "{\"deviceId\":%d,\"status\":\"on\"}"
+
 
 #define MQTT_HOST_DEFAULT "test.mosquitto.org"
 #define MQTT_PORT 1883
@@ -24,6 +27,8 @@ extern "C"
 #define MQTT_TOPIC_ROOT "laai/conforto/npi"
 #define SENSORS_TOPIC MQTT_TOPIC_ROOT "/clima"
 #define NOISE_TOPIC MQTT_TOPIC_ROOT "/ruido"
+#define STATUS_TOPIC MQTT_TOPIC_ROOT "/status"
+
 
 Preferences preferences;
 
@@ -110,10 +115,14 @@ void noiseMonitoring()
   uint32_t noise = noiseSensor.readSmooth();
   setNoiseThreshold();
 
+  setDeviceId();
+  char statusJson[MQTT_MESSAGE_STATUS_LEN];
+  snprintf(statusJson, MQTT_MESSAGE_STATUS_LEN, STATUS_JSON, deviceId);
+  mqttManager.publish(STATUS_TOPIC, 0, false, statusJson);
+
   if (noise > noiseThreshold)
   {
 
-    setDeviceId();
     time_t now = time(nullptr);
     char output[MQTT_MESSAGE_NOISE_LEN];
     snprintf(output, MQTT_MESSAGE_NOISE_LEN, NOISE_SENSOR, deviceId, now);
