@@ -1,5 +1,6 @@
 .pio
 .vscode/**
+.ccls-cache/**
 .cache
 compile_commands.json
 .vscode/settings.json

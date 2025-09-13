@@ -11,7 +11,7 @@ extern "C"
 #include "freertos/timers.h"
 }
 
-#define DEVICE_NAME "LAAI-ESP32-01"
+#define DEVICE_NAME "LAAI-ESP32-03"
 
 #define MQTT_MESSAGE_SENSORS_LEN 128
 #define MQTT_MESSAGE_NOISE_LEN 64
@@ -112,7 +112,7 @@ void deactiveReadSensors()
 void noiseMonitoring()
 {
 
-  uint32_t noise = noiseSensor.readSmooth();
+  uint32_t noise = noiseSensor.readSmoothed();
   setNoiseThreshold();
 
   setDeviceId();
@@ -218,7 +218,7 @@ void setup()
 
   dht.begin();
   noiseSensor.begin();
-  noiseSensor.beginSmoothing();
+  noiseSensor.startSmoothing();
 
   sensorsTimer = xTimerCreate("sensorsTimer", pdMS_TO_TICKS(5000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(activeReadSensors));
   noiseTimer = xTimerCreate("noiseTimer", pdMS_TO_TICKS(1000), pdFALSE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(noiseMonitoring));

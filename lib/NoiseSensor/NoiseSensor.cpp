@@ -23,7 +23,7 @@ void NoiseSensor::begin()
   esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_12, ADC_WIDTH_BIT_12, 1100, &adc_cal); // Inicializa a estrutura de calibracao
 }
 
-void NoiseSensor::beginSmoothing()
+void NoiseSensor::startSmoothing()
 {
   TimerHandle_t sensorTimer = xTimerCreate("SensorTimer", pdMS_TO_TICKS(1), pdTRUE, NULL, smooth);
   xTimerStart(sensorTimer, 0);
@@ -39,7 +39,7 @@ u_int32_t NoiseSensor::read()
   return readVoltage();
 }
 
-u_int32_t NoiseSensor::readSmooth()
+u_int32_t NoiseSensor::readSmoothed()
 {
   return mean;
 }
