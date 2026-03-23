@@ -25,6 +25,8 @@ esp_adc_cal_characteristics_t adc_cal; //Estrutura que contem as informacoes par
 
 const char* TZ_INFO    = "BRST+3BRDT+2,M10.3.0,M2.3.0";  // enter your time zone (https://remotemonitoringsystems.ca/time-zone-abbreviations.php)
 
+#define GPIO34 ADC1_CHANNEL_6
+
 #define DHTPIN 4    
 
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
